@@ -667,3 +667,6 @@ class MedicalApp {
 
 // Initialize app
 const app = new MedicalApp();
+
+// Make app globally available
+window.app = app;

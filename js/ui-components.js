@@ -465,10 +465,22 @@ class UploadModal extends BaseModal {
         const nextBtn = this.element.querySelector('.btn-next');
         const submitBtn = this.element.querySelector('.btn-submit');
 
-        const isValid = this.validateCurrentStep();
+        const isValid = this.isStepValid();
 
         if (nextBtn) nextBtn.disabled = !isValid;
         if (submitBtn) submitBtn.disabled = !isValid;
+    }
+
+    isStepValid() {
+        switch (this.currentStep) {
+            case 1:
+                return this.formData.file !== null;
+            case 2:
+                return this.formData.apiKey && this.validateApiKey();
+            case 3:
+                return this.formData.file && this.formData.apiKey;
+        }
+        return false;
     }
 
     getStepTemplate(step) {
