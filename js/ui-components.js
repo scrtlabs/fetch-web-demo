@@ -624,7 +624,7 @@ class ReportModal extends BaseModal {
                         <button class="modal-close">&times;</button>
                     </div>
                 </div>
-                <div class="modal-body" style="padding: 0; overflow: hidden;">
+                <div class="modal-body" style="padding: 0; overflow: auto; max-height: calc(95vh - 120px);">
                     <div class="report-container">
                         <div class="image-panel">
                             <div class="image-viewer">

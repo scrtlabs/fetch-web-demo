@@ -5,8 +5,8 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--spacing-xl);
-    min-height: calc(100vh - 140px);
-    padding: var(--spacing-xl) 0;
+    min-height: 600px;
+    padding: var(--spacing-xl);
   }
   
   .image-panel {
@@ -17,6 +17,7 @@
     border: 1px solid var(--glass-border);
     overflow: hidden;
     position: relative;
+    height: 600px;
   }
   
   .report-panel {
@@ -28,6 +29,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    height: 600px;
   }
   
   /* Image Viewer */
