@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Diagnostics Platform - AI-Powered Breast Density Analysis</title>
+
+    <!-- Meta Information -->
+    <meta name="description"
+        content="Advanced AI-powered medical diagnostics platform for breast density classification and mammography analysis.">
+    <meta name="keywords" content="medical diagnostics, AI analysis, breast density, mammography, healthcare">
+    <meta name="author" content="Medical Diagnostics Platform">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%230066cc'/><path d='M35 45h30v10H35z' fill='white'/><path d='M45 35h10v30H45z' fill='white'/></svg>">
+
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/medical-theme.css">
+
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="js/app.js" as="script">
+    <link rel="preload" href="js/mock-api.js" as="script">
+
+    <!-- Font Loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="logo">
+                <div class="logo-icon">🏥</div>
+                <span>Medical Diagnostics</span>
+            </div>
+            <div class="loading-spinner"></div>
+            <p>Initializing platform...</p>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="app" class="app" style="display: none;">
+        <!-- Header -->
+        <header class="header">
+            <div class="container">
+                <div class="header-content">
+                    <!-- Logo and Branding -->
+                    <a href="#" class="logo">
+                        <div class="logo-icon">🏥</div>
+                        <span>Medical Diagnostics</span>
+                    </a>
+
+                    <!-- Navigation Actions -->
+                    <div class="nav-actions">
+                        <button class="btn btn-secondary" id="settings-btn" title="Settings">
+                            ⚙️ Settings
+                        </button>
+                        <button class="btn btn-primary btn-diagnose" id="diagnose-btn">
+                            📋 New Diagnosis
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                <!-- Dashboard Header -->
+                <section class="dashboard-header">
+                    <h1 class="dashboard-title">AI-Powered Medical Diagnostics</h1>
+                    <p class="dashboard-subtitle">
+                        Advanced breast density classification and mammography analysis using cutting-edge artificial
+                        intelligence
+                    </p>
+                </section>
+
+                <!-- Quick Stats -->
+                <section class="quick-stats glass-card"
+                    style="padding: var(--spacing-lg); margin-bottom: var(--spacing-xl);">
+                    <div class="stats-grid"
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-lg);">
+                        <div class="stat-item">
+                            <div class="stat-value" id="total-requests">0</div>
+                            <div class="stat-label">Total Requests</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="completed-requests">0</div>
+                            <div class="stat-label">Completed</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="pending-requests">0</div>
+                            <div class="stat-label">Processing</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="success-rate">0%</div>
+                            <div class="stat-label">Success Rate</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Search and Filter Bar -->
+                <section class="search-filter-bar">
+                    <div class="search-input-group">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" class="search-input" placeholder="Search by filename, ID, or notes..."
+                            id="search-input">
+                    </div>
+                    <select class="filter-select" id="sort-select">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="filename">Filename A-Z</option>
+                        <option value="status">Status</option>
+                    </select>
+                    <button class="btn btn-secondary" id="clear-filters">Clear Filters</button>
+                </section>
+
+                <!-- Status Filter Tabs -->
+                <section class="status-filters">
+                    <button class="filter-tab active" data-status="all">
+                        All Requests
+                        <span class="filter-count">0</span>
+                    </button>
+                    <button class="filter-tab" data-status="completed">
+                        Completed
+                        <span class="filter-count">0</span>
+                    </button>
+                    <button class="filter-tab" data-status="pending">
+                        Pending
+                        <span class="filter-count">0</span>
+                    </button>
+                    <button class="filter-tab" data-status="processing">
+                        Processing
+                        <span class="filter-count">0</span>
+                    </button>
+                    <button class="filter-tab" data-status="failed">
+                        Failed
+                        <span class="filter-count">0</span>
+                    </button>
+                </section>
+
+                <!-- Requests Grid -->
+                <section class="requests-section">
+                    <div class="requests-grid" id="requests-grid">
+                        <!-- Request cards will be dynamically inserted here -->
+
+                        <!-- Loading State -->
+                        <div class="loading-state" id="loading-state" style="display: none;">
+                            <div class="glass-card" style="padding: var(--spacing-xl); text-align: center;">
+                                <div class="loading-spinner" style="margin: 0 auto var(--spacing-md);"></div>
+                                <p>Loading diagnostic requests...</p>
+                            </div>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div class="empty-state" id="empty-state" style="display: none;">
+                            <div class="empty-icon">📋</div>
+                            <h3 class="empty-title">No diagnostic requests yet</h3>
+                            <p class="empty-description">
+                                Start by creating your first diagnostic request to analyze medical images with
+                                AI-powered insights.
+                            </p>
+                            <button class="btn btn-primary btn-diagnose">Create First Request</button>
+                        </div>
+                    </div>
+
+                    <!-- Load More Button -->
+                    <div class="load-more-section" style="text-align: center; margin-top: var(--spacing-xl);">
+                        <button class="btn btn-secondary" id="load-more-btn" style="display: none;">
+                            Load More Requests
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Help Section -->
+                <section class="help-section glass-card"
+                    style="margin-top: var(--spacing-xxl); padding: var(--spacing-xl);">
+                    <h3>Getting Started</h3>
+                    <div class="help-grid"
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--spacing-lg); margin-top: var(--spacing-lg);">
+                        <div class="help-item">
+                            <div class="help-icon">📤</div>
+                            <h4>1. Upload Images</h4>
+                            <p>Upload mammography images in JPEG, PNG, or DICOM format. Maximum file size is 50MB.</p>
+                        </div>
+                        <div class="help-item">
+                            <div class="help-icon">🔑</div>
+                            <h4>2. API Configuration</h4>
+                            <p>Provide your API key for authentication. Demo key is pre-filled for testing purposes.</p>
+                        </div>
+                        <div class="help-item">
+                            <div class="help-icon">🤖</div>
+                            <h4>3. AI Analysis</h4>
+                            <p>Our AI system analyzes breast density and provides detailed diagnostic reports.</p>
+                        </div>
+                        <div class="help-item">
+                            <div class="help-icon">📊</div>
+                            <h4>4. View Results</h4>
+                            <p>Access comprehensive reports with BI-RADS classification and clinical recommendations.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer"
+            style="margin-top: var(--spacing-xxl); padding: var(--spacing-xl) 0; background: var(--glass-bg); backdrop-filter: blur(16px); border-top: 1px solid var(--glass-border);">
+            <div class="container">
+                <div class="footer-content"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--spacing-lg);">
+                    <div class="footer-section">
+                        <h4>Medical Diagnostics Platform</h4>
+                        <p>Advanced AI-powered diagnostic analysis for healthcare professionals.</p>
+                        <p><small>Demo Version - For demonstration purposes only</small></p>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Features</h4>
+                        <ul style="list-style: none; padding: 0;">
+                            <li>• Breast density classification</li>
+                            <li>• BI-RADS categorization</li>
+                            <li>• Automated report generation</li>
+                            <li>• DICOM image support</li>
+                        </ul>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Support</h4>
+                        <ul style="list-style: none; padding: 0;">
+                            <li><a href="#" class="medical-link">Documentation</a></li>
+                            <li><a href="#" class="medical-link">API Reference</a></li>
+                            <li><a href="#" class="medical-link">Contact Support</a></li>
+                            <li><a href="#" class="medical-link">Privacy Policy</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="footer-bottom"
+                    style="text-align: center; margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--medium-gray);">
+                    <p>&copy; 2025 Medical Diagnostics Platform. All rights reserved.</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- JavaScript Files -->
+    <script src="js/mock-api.js"></script>
+    <script src="js/ui-components.js"></script>
+    <script src="js/markdown-renderer.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/app.js"></script>
+
+    <!-- Initialization Script -->
+    <script>
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            // Hide loading screen
+            setTimeout(function() {
+                const loadingScreen = document.getElementById('loading-screen');
+                const app = document.getElementById('app');
+                
+                if (loadingScreen && app) {
+                    loadingScreen.style.opacity = '0';
+                    setTimeout(function() {
+                        loadingScreen.style.display = 'none';
+                        app.style.display = 'block';
+                        app.style.opacity = '0';
+                        app.style.animation = 'fadeIn 0.5s ease-out forwards';
+                    }, 300);
+                }
+            }, 1500);
+
+            // Update stats periodically
+            function updateStats() {
+                if (window.app && window.app.requests) {
+                    const requests = window.app.requests;
+                    const stats = {
+                        total: requests.length,
+                        completed: requests.filter(r => r.status === 'completed').length,
+                        pending: requests.filter(r => r.status === 'pending' || r.status === 'processing').length,
+                        failed: requests.filter(r => r.status === 'failed').length
+                    };
+
+                    // Update DOM
+                    const totalEl = document.getElementById('total-requests');
+                    const completedEl = document.getElementById('completed-requests');
+                    const pendingEl = document.getElementById('pending-requests');
+                    const successRateEl = document.getElementById('success-rate');
+
+                    if (totalEl) totalEl.textContent = stats.total;
+                    if (completedEl) completedEl.textContent = stats.completed;
+                    if (pendingEl) pendingEl.textContent = stats.pending;
+                    if (successRateEl) {
+                        const rate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
+                        successRateEl.textContent = rate + '%';
+                    }
+                }
+            }
+
+            // Update stats every 5 seconds
+            setInterval(updateStats, 5000);
+            
+            // Initial stats update
+            setTimeout(updateStats, 2000);
+        });
+
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            .loading-screen {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+                transition: opacity 0.3s ease;
+            }
+            
+            .loading-content {
+                text-align: center;
+                color: white;
+            }
+            
+            .loading-content .logo {
+                margin-bottom: 2rem;
+                font-size: 2rem;
+                font-weight: 600;
+            }
+            
+            .loading-content p {
+                margin-top: 1rem;
+                opacity: 0.9;
+            }
+            
+            .stat-item {
+                text-align: center;
+            }
+            
+            .stat-value {
+                font-size: 2rem;
+                font-weight: 700;
+                color: var(--primary-blue);
+                margin-bottom: 0.5rem;
+            }
+            
+            .stat-label {
+                font-size: 0.875rem;
+                color: var(--dark-gray);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+            
+            .help-icon {
+                font-size: 3rem;
+                margin-bottom: 1rem;
+            }
+            
+            .help-item {
+                text-align: center;
+            }
+            
+            .help-item h4 {
+                color: var(--primary-blue);
+                margin-bottom: 0.5rem;
+            }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
+            .app {
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .main-content {
+                flex: 1;
+                padding: var(--spacing-xl) 0;
+            }
+            
+            .footer {
+                margin-top: auto;
+            }
+            
+            .medical-link {
+                color: var(--primary-blue);
+                text-decoration: none;
+                transition: color 0.15s ease;
+            }
+            
+            .medical-link:hover {
+                color: var(--primary-blue-dark);
+                text-decoration: underline;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+
+</html>

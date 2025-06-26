@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Report Viewer - Medical Diagnostics Platform</title>
+
+    <!-- Meta Information -->
+    <meta name="description"
+        content="View detailed medical diagnostic reports with AI-powered analysis and recommendations.">
+    <meta name="keywords" content="medical report, diagnostic analysis, breast density, mammography results">
+    <meta name="author" content="Medical Diagnostics Platform">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%230066cc'/><path d='M35 45h30v10H35z' fill='white'/><path d='M45 35h10v30H45z' fill='white'/></svg>">
+
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/medical-theme.css">
+
+    <!-- Font Loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Header with Navigation -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <!-- Logo and Branding -->
+                <a href="index.html" class="logo">
+                    <div class="logo-icon">🏥</div>
+                    <span>Medical Diagnostics</span>
+                </a>
+
+                <!-- Navigation Actions -->
+                <div class="nav-actions">
+                    <a href="index.html" class="btn btn-secondary">
+                        ← Back to Dashboard
+                    </a>
+                    <button class="btn btn-secondary" id="print-report-btn">
+                        🖨️ Print
+                    </button>
+                    <button class="btn btn-secondary" id="export-report-btn">
+                        📄 Export
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Report Navigation -->
+    <nav class="report-navigation">
+        <div class="container">
+            <div class="breadcrumb">
+                <a href="index.html" class="breadcrumb-item">Dashboard</a>
+                <span class="breadcrumb-separator">/</span>
+                <span class="breadcrumb-item active" id="report-breadcrumb">Report</span>
+            </div>
+
+            <div class="report-meta-info">
+                <span class="report-meta-item">
+                    <span class="medical-icon time"></span>
+                    <span id="report-timestamp">Loading...</span>
+                </span>
+                <span class="report-meta-item">
+                    <span class="medical-icon report"></span>
+                    <span id="report-status">Processing</span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Report Content -->
+    <main class="main-content">
+        <div class="container-fluid">
+            <!-- Loading State -->
+            <div class="loading-state glass-card" id="report-loading" style="display: none;">
+                <div style="text-align: center; padding: var(--spacing-xxl);">
+                    <div class="loading-spinner" style="margin: 0 auto var(--spacing-lg);"></div>
+                    <h3>Loading Medical Report</h3>
+                    <p>Please wait while we retrieve your diagnostic analysis...</p>
+                </div>
+            </div>
+
+            <!-- Error State -->
+            <div class="error-state glass-card" id="report-error" style="display: none;">
+                <div style="text-align: center; padding: var(--spacing-xxl);">
+                    <div class="error-icon" style="font-size: 4rem; margin-bottom: var(--spacing-lg);">⚠️</div>
+                    <h3>Report Not Found</h3>
+                    <p id="error-message">The requested medical report could not be found or is no longer available.</p>
+                    <a href="index.html" class="btn btn-primary" style="margin-top: var(--spacing-lg);">
+                        Return to Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <!-- Report Container -->
+            <div class="report-container" id="report-container" style="display: none;">
+                <!-- Image Panel -->
+                <div class="image-panel">
+                    <div class="image-viewer">
+                        <div class="image-viewer-header">
+                            <h4 class="image-title" id="image-title">Medical Image</h4>
+                            <div class="image-controls">
+                                <button class="image-control-btn tooltip" id="zoom-out" title="Zoom Out">
+                                    <span>−</span>
+                                    <span class="tooltip-content">Zoom Out</span>
+                                </button>
+                                <button class="image-control-btn tooltip" id="zoom-reset" title="Reset Zoom">
+                                    <span>⌂</span>
+                                    <span class="tooltip-content">Reset Zoom</span>
+                                </button>
+                                <button class="image-control-btn tooltip" id="zoom-in" title="Zoom In">
+                                    <span>+</span>
+                                    <span class="tooltip-content">Zoom In</span>
+                                </button>
+                                <button class="image-control-btn tooltip" id="fullscreen-btn" title="Fullscreen">
+                                    <span>⛶</span>
+                                    <span class="tooltip-content">Fullscreen</span>
+                                </button>
+                                <button class="image-control-btn tooltip" id="download-image" title="Download Image">
+                                    <span>⬇</span>
+                                    <span class="tooltip-content">Download</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="image-display" id="image-display">
+                            <img class="medical-image" id="medical-image" alt="Medical Image" src="">
+                            <div class="zoom-indicator" id="zoom-indicator">100%</div>
+
+                            <!-- Image Loading State -->
+                            <div class="image-loading" id="image-loading">
+                                <div class="loading-spinner"></div>
+                                <p>Loading medical image...</p>
+                            </div>
+
+                            <!-- Image Error State -->
+                            <div class="image-error" id="image-error" style="display: none;">
+                                <div class="error-icon">📷</div>
+                                <p>Failed to load medical image</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report Panel -->
+                <div class="report-panel">
+                    <div class="report-header">
+                        <h3 class="report-title">Diagnostic Analysis Report</h3>
+                        <div class="report-meta">
+                            <div class="report-meta-item">
+                                <span class="medical-icon report"></span>
+                                <span>Report ID: <span id="header-report-id">N/A</span></span>
+                            </div>
+                            <div class="report-meta-item">
+                                <span class="medical-icon calendar"></span>
+                                <span>Analysis Date: <span id="header-analysis-date">N/A</span></span>
+                            </div>
+                            <div class="report-meta-item">
+                                <span class="medical-icon patient"></span>
+                                <span>File: <span id="header-filename">N/A</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="report-content" id="report-content">
+                        <!-- Table of Contents -->
+                        <div class="table-of-contents" id="table-of-contents" style="display: none;">
+                            <h4>Table of Contents</h4>
+                            <ul id="toc-list">
+                                <!-- TOC items will be generated automatically -->
+                            </ul>
+                        </div>
+
+                        <!-- Report Content Area -->
+                        <div class="medical-report" id="medical-report-content">
+                            <!-- Processing State -->
+                            <div class="processing-state" id="processing-state">
+                                <div class="findings-section">
+                                    <div class="findings-title">
+                                        <span class="severity-indicator severity-medium"></span>
+                                        Analysis in Progress
+                                    </div>
+                                    <p>Your diagnostic analysis is currently being processed by our AI system. This
+                                        typically takes 2-10 minutes depending on image complexity and current system
+                                        load.</p>
+
+                                    <div class="processing-details">
+                                        <h4>Processing Steps:</h4>
+                                        <ul class="processing-steps">
+                                            <li class="step completed">✓ Image uploaded and validated</li>
+                                            <li class="step active">🔄 AI analysis in progress</li>
+                                            <li class="step pending">⏳ Generating diagnostic report</li>
+                                            <li class="step pending">⏳ Quality review and validation</li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="progress-bar" style="margin-top: var(--spacing-lg);">
+                                        <div class="progress-fill" id="processing-progress" style="width: 45%;"></div>
+                                    </div>
+
+                                    <p
+                                        style="margin-top: var(--spacing-md); text-align: center; color: var(--dark-gray);">
+                                        Estimated completion: <span id="estimated-completion">3-5 minutes</span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Completed Report Content -->
+                            <div class="completed-report" id="completed-report" style="display: none;">
+                                <!-- Report content will be dynamically inserted here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Report Actions -->
+                    <div class="report-actions"
+                        style="padding: var(--spacing-lg); border-top: 1px solid var(--medium-gray); background: var(--light-gray);">
+                        <div class="action-buttons"
+                            style="display: flex; gap: var(--spacing-md); justify-content: center; flex-wrap: wrap;">
+                            <button class="btn btn-primary" id="share-report-btn">
+                                📤 Share Report
+                            </button>
+                            <button class="btn btn-secondary" id="download-pdf-btn">
+                                📄 Download PDF
+                            </button>
+                            <button class="btn btn-secondary" id="download-markdown-btn">
+                                📝 Download Markdown
+                            </button>
+                            <button class="btn btn-secondary" id="view-raw-data-btn">
+                                🔍 View Raw Data
+                            </button>
+                        </div>
+
+                        <div class="report-info"
+                            style="text-align: center; margin-top: var(--spacing-md); font-size: 0.875rem; color: var(--dark-gray);">
+                            <p>This report was generated using AI-powered analysis and should be reviewed by a qualified
+                                medical professional.</p>
+                            <p>Generated on <span id="generation-timestamp">Loading...</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Share Modal -->
+    <div class="modal-overlay" id="share-modal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Share Medical Report</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="share-options">
+                    <h4>Share Options</h4>
+                    <div class="share-buttons"
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md);">
+                        <button class="btn btn-secondary share-option" data-method="email">
+                            📧 Email Report
+                        </button>
+                        <button class="btn btn-secondary share-option" data-method="link">
+                            🔗 Copy Link
+                        </button>
+                        <button class="btn btn-secondary share-option" data-method="qr">
+                            📱 QR Code
+                        </button>
+                    </div>
+
+                    <div class="share-link-section" style="margin-top: var(--spacing-lg);">
+                        <label class="form-label">Shareable Link</label>
+                        <div style="display: flex; gap: var(--spacing-sm);">
+                            <input type="text" class="form-control" id="share-link-input" readonly>
+                            <button class="btn btn-primary" id="copy-link-btn">Copy</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- JavaScript Files -->
+    <script src="js/mock-api.js"></script>
+    <script src="js/ui-components.js"></script>
+    <script src="js/markdown-renderer.js"></script>
+    <script src="js/storage.js"></script>
+
+    <!-- Report Viewer Script -->
+    <script>
+        class ReportViewer {
+            constructor() {
+                this.currentRequest = null;
+                this.imageZoom = 1;
+                this.imagePosition = { x: 0, y: 0 };
+                this.isDragging = false;
+                this.markdownRenderer = new MedicalReportFormatter();
+                this.reportExporter = new ReportExporter();
+
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.loadReportFromURL();
+            }
+
+            setupEventListeners() {
+                // Image controls
+                document.getElementById('zoom-in').addEventListener('click', () => this.zoomIn());
+                document.getElementById('zoom-out').addEventListener('click', () => this.zoomOut());
+                document.getElementById('zoom-reset').addEventListener('click', () => this.resetZoom());
+                document.getElementById('fullscreen-btn').addEventListener('click', () => this.toggleFullscreen());
+
+                // Export buttons
+                document.getElementById('print-report-btn').addEventListener('click', () => this.printReport());
+                document.getElementById('export-report-btn').addEventListener('click', () => this.showExportOptions());
+                document.getElementById('download-pdf-btn').addEventListener('click', () => this.downloadPDF());
+                document.getElementById('download-markdown-btn').addEventListener('click', () => this.downloadMarkdown());
+
+                // Share functionality
+                document.getElementById('share-report-btn').addEventListener('click', () => this.showShareModal());
+                document.getElementById('copy-link-btn').addEventListener('click', () => this.copyShareLink());
+
+                // Image interaction
+                this.setupImageInteraction();
+
+                // Modal close
+                document.querySelectorAll('.modal-close').forEach(btn => {
+                    btn.addEventListener('click', () => this.closeModals());
+                });
+            }
+
+            setupImageInteraction() {
+                const imageDisplay = document.getElementById('image-display');
+                const medicalImage = document.getElementById('medical-image');
+
+                // Mouse wheel zoom
+                imageDisplay.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    if (e.deltaY < 0) {
+                        this.zoomIn();
+                    } else {
+                        this.zoomOut();
+                    }
+                });
+
+                // Drag functionality
+                imageDisplay.addEventListener('mousedown', (e) => this.startDrag(e));
+                imageDisplay.addEventListener('mousemove', (e) => this.drag(e));
+                imageDisplay.addEventListener('mouseup', () => this.endDrag());
+                imageDisplay.addEventListener('mouseleave', () => this.endDrag());
+
+                // Touch support for mobile
+                imageDisplay.addEventListener('touchstart', (e) => this.handleTouch(e, 'start'));
+                imageDisplay.addEventListener('touchmove', (e) => this.handleTouch(e, 'move'));
+                imageDisplay.addEventListener('touchend', (e) => this.handleTouch(e, 'end'));
+            }
+
+            loadReportFromURL() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const reportId = urlParams.get('id') || window.location.hash.replace('#', '');
+
+                if (!reportId) {
+                    this.showError('No report ID provided');
+                    return;
+                }
+
+                this.loadReport(reportId);
+            }
+
+            async loadReport(reportId) {
+                this.showLoading();
+
+                try {
+                    // Load from storage
+                    const request = window.storage.getRequest(reportId);
+
+                    if (!request) {
+                        throw new Error('Report not found');
+                    }
+
+                    this.currentRequest = request;
+                    this.displayReport();
+
+                    // If still processing, simulate updates
+                    if (request.status === 'pending' || request.status === 'processing') {
+                        this.simulateProcessing();
+                    }
+
+                } catch (error) {
+                    this.showError(error.message);
+                }
+            }
+
+            showLoading() {
+                document.getElementById('report-loading').style.display = 'block';
+                document.getElementById('report-container').style.display = 'none';
+                document.getElementById('report-error').style.display = 'none';
+            }
+
+            showError(message) {
+                document.getElementById('error-message').textContent = message;
+                document.getElementById('report-error').style.display = 'block';
+                document.getElementById('report-loading').style.display = 'none';
+                document.getElementById('report-container').style.display = 'none';
+            }
+
+            displayReport() {
+                document.getElementById('report-loading').style.display = 'none';
+                document.getElementById('report-container').style.display = 'grid';
+                document.getElementById('report-error').style.display = 'none';
+
+                // Update header information
+                this.updateHeader();
+
+                // Load image
+                this.loadImage();
+
+                // Display report content
+                this.displayReportContent();
+            }
+
+            updateHeader() {
+                const request = this.currentRequest;
+
+                document.getElementById('report-breadcrumb').textContent = `Report ${request.id}`;
+                document.getElementById('header-report-id').textContent = request.id;
+                document.getElementById('header-analysis-date').textContent = new Date(request.timestamp).toLocaleDateString();
+                document.getElementById('header-filename').textContent = request.filename;
+                document.getElementById('report-timestamp').textContent = this.getTimeAgo(request.timestamp);
+                document.getElementById('report-status').textContent = request.status;
+                document.getElementById('generation-timestamp').textContent = new Date().toLocaleString();
+            }
+
+            loadImage() {
+                const request = this.currentRequest;
+                const imageElement = document.getElementById('medical-image');
+                const imageTitle = document.getElementById('image-title');
+                const imageLoading = document.getElementById('image-loading');
+                const imageError = document.getElementById('image-error');
+
+                imageTitle.textContent = request.filename;
+
+                if (request.imageData) {
+                    imageLoading.style.display = 'flex';
+                    imageError.style.display = 'none';
+
+                    imageElement.onload = () => {
+                        imageLoading.style.display = 'none';
+                        imageElement.style.display = 'block';
+                    };
+
+                    imageElement.onerror = () => {
+                        imageLoading.style.display = 'none';
+                        imageError.style.display = 'flex';
+                    };
+
+                    imageElement.src = request.imageData;
+                } else {
+                    imageLoading.style.display = 'none';
+                    imageError.style.display = 'flex';
+                }
+            }
+
+            displayReportContent() {
+                const request = this.currentRequest;
+                const processingState = document.getElementById('processing-state');
+                const completedReport = document.getElementById('completed-report');
+
+                if (request.status === 'completed' && request.report) {
+                    processingState.style.display = 'none';
+                    completedReport.style.display = 'block';
+
+                    // Render markdown report
+                    const formatted = this.markdownRenderer.formatReport({
+                        markdown: request.report,
+                        metadata: {
+                            reportId: request.id,
+                            studyDate: request.timestamp,
+                            physician: 'AI Diagnostic System'
+                        }
+                    });
+
+                    completedReport.innerHTML = formatted.html;
+
+                    // Generate table of contents if needed
+                    if (formatted.toc) {
+                        const tocElement = document.getElementById('table-of-contents');
+                        tocElement.style.display = 'block';
+                        document.getElementById('toc-list').innerHTML = formatted.toc;
+                    }
+
+                } else {
+                    processingState.style.display = 'block';
+                    completedReport.style.display = 'none';
+
+                    // Update processing progress
+                    this.updateProcessingState();
+                }
+            }
+
+            simulateProcessing() {
+                let progress = this.currentRequest.progress || 0;
+
+                const interval = setInterval(() => {
+                    progress += Math.random() * 10 + 5;
+                    progress = Math.min(progress, 100);
+
+                    this.currentRequest.progress = progress;
+                    this.updateProcessingProgress(progress);
+
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        this.completeProcessing();
+                    }
+                }, 2000 + Math.random() * 3000);
+            }
+
+            updateProcessingProgress(progress) {
+                const progressFill = document.getElementById('processing-progress');
+                if (progressFill) {
+                    progressFill.style.width = `${progress}%`;
+                }
+
+                // Update processing steps
+                const steps = document.querySelectorAll('.processing-steps .step');
+                steps.forEach((step, index) => {
+                    if (progress > (index + 1) * 25) {
+                        step.className = 'step completed';
+                        step.innerHTML = step.innerHTML.replace(/🔄|⏳/, '✓');
+                    } else if (progress > index * 25) {
+                        step.className = 'step active';
+                        if (!step.innerHTML.includes('🔄')) {
+                            step.innerHTML = step.innerHTML.replace(/⏳/, '🔄');
+                        }
+                    }
+                });
+            }
+
+            completeProcessing() {
+                this.currentRequest.status = 'completed';
+                this.currentRequest.report = MockAPI.generateMedicalReport(this.currentRequest);
+
+                // Update storage
+                window.storage.saveRequest(this.currentRequest);
+
+                // Update display
+                this.displayReportContent();
+                this.updateHeader();
+
+                // Show completion notification
+                this.showToast('success', 'Analysis Complete', 'Your diagnostic report is now ready for review.');
+            }
+
+            // Image viewer controls
+            zoomIn() {
+                this.imageZoom = Math.min(this.imageZoom * 1.2, 5);
+                this.updateImageTransform();
+            }
+
+            zoomOut() {
+                this.imageZoom = Math.max(this.imageZoom / 1.2, 0.1);
+                this.updateImageTransform();
+            }
+
+            resetZoom() {
+                this.imageZoom = 1;
+                this.imagePosition = { x: 0, y: 0 };
+                this.updateImageTransform();
+            }
+
+            updateImageTransform() {
+                const image = document.getElementById('medical-image');
+                const zoomIndicator = document.getElementById('zoom-indicator');
+
+                if (image) {
+                    image.style.transform = `translate(${this.imagePosition.x}px, ${this.imagePosition.y}px) scale(${this.imageZoom})`;
+                    image.classList.toggle('zoomed', this.imageZoom > 1);
+                }
+
+                if (zoomIndicator) {
+                    zoomIndicator.textContent = Math.round(this.imageZoom * 100) + '%';
+                }
+            }
+
+            startDrag(e) {
+                if (this.imageZoom > 1) {
+                    this.isDragging = true;
+                    this.lastMousePos = { x: e.clientX, y: e.clientY };
+                    e.preventDefault();
+                }
+            }
+
+            drag(e) {
+                if (this.isDragging && this.imageZoom > 1) {
+                    const deltaX = e.clientX - this.lastMousePos.x;
+                    const deltaY = e.clientY - this.lastMousePos.y;
+
+                    this.imagePosition.x += deltaX;
+                    this.imagePosition.y += deltaY;
+
+                    this.lastMousePos = { x: e.clientX, y: e.clientY };
+                    this.updateImageTransform();
+                }
+            }
+
+            endDrag() {
+                this.isDragging = false;
+            }
+
+            toggleFullscreen() {
+                const imagePanel = document.querySelector('.image-panel');
+                if (imagePanel) {
+                    imagePanel.classList.toggle('fullscreen');
+                }
+            }
+
+            // Export functions
+            printReport() {
+                if (this.currentRequest && this.currentRequest.report) {
+                    this.reportExporter.exportToPDF({
+                        markdown: this.currentRequest.report,
+                        metadata: {
+                            reportId: this.currentRequest.id,
+                            studyDate: this.currentRequest.timestamp
+                        }
+                    });
+                }
+            }
+
+            downloadPDF() {
+                this.printReport();
+            }
+
+            downloadMarkdown() {
+                if (this.currentRequest && this.currentRequest.report) {
+                    this.reportExporter.exportToMarkdown({
+                        markdown: this.currentRequest.report
+                    }, `medical_report_${this.currentRequest.id}.md`);
+                }
+            }
+
+            showShareModal() {
+                const modal = document.getElementById('share-modal');
+                const shareLink = `${window.location.origin}/report.html?id=${this.currentRequest.id}`;
+                document.getElementById('share-link-input').value = shareLink;
+                modal.style.display = 'flex';
+            }
+
+            copyShareLink() {
+                const input = document.getElementById('share-link-input');
+                input.select();
+                document.execCommand('copy');
+                this.showToast('success', 'Link Copied', 'Report link has been copied to clipboard.');
+            }
+
+            closeModals() {
+                document.querySelectorAll('.modal-overlay').forEach(modal => {
+                    modal.style.display = 'none';
+                });
+            }
+
+            getTimeAgo(timestamp) {
+                const now = new Date();
+                const time = new Date(timestamp);
+                const diffInSeconds = Math.floor((now - time) / 1000);
+
+                if (diffInSeconds < 60) return 'Just now';
+                if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+                if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+                if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+
+                return time.toLocaleDateString();
+            }
+
+            showToast(type, title, message) {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.innerHTML = `
+                    <div class="toast-content">
+                        <div class="toast-title">${title}</div>
+                        <div class="toast-message">${message}</div>
+                    </div>
+                    <button class="toast-close">&times;</button>
+                `;
+
+                toast.querySelector('.toast-close').addEventListener('click', () => {
+                    toast.remove();
+                });
+
+                container.appendChild(toast);
+
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.remove();
+                    }
+                }, 5000);
+            }
+        }
+
+        // Initialize report viewer when DOM is ready
+        document.addEventListener('DOMContentLoaded', function () {
+            window.reportViewer = new ReportViewer();
+        });
+    </script>
+
+    <style>
+        .processing-steps {
+            list-style: none;
+            padding: 0;
+            margin: var(--spacing-lg) 0;
+        }
+
+        .processing-steps .step {
+            padding: var(--spacing-sm) 0;
+            color: var(--dark-gray);
+            transition: color 0.3s ease;
+        }
+
+        .processing-steps .step.completed {
+            color: var(--success-green);
+        }
+
+        .processing-steps .step.active {
+            color: var(--primary-blue);
+            font-weight: 500;
+        }
+
+        .image-loading,
+        .image-error {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            font-size: 0.875rem;
+        }
+
+        .image-error .error-icon {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .share-option {
+            padding: var(--spacing-lg);
+            text-align: left;
+            border: 2px solid var(--medium-gray);
+            transition: all 0.15s ease;
+        }
+
+        .share-option:hover {
+            border-color: var(--primary-blue);
+            background: var(--secondary-blue);
+        }
+
+        .image-panel.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1000;
+            background: black;
+        }
+
+        @media (max-width: 1024px) {
+            .report-container {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+
+            .image-panel {
+                order: 2;
+                max-height: 400px;
+            }
+
+            .report-panel {
+                order: 1;
+            }
+        }
+    </style>
+</body>
+
+</html>

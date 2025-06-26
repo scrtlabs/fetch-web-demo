@@ -1,0 +1,353 @@
+<!-- Demo Section -->
+<section class="demo-section" id="demo">
+    <div class="container">
+        <div class="demo-content">
+            <div class="demo-text">
+                <h2 class="demo-title">See It In Action</h2>
+                <p class="demo-description">
+                    Watch how our AI system analyzes mammography images and generates
+                    comprehensive diagnostic reports in real-time. Experience the power
+                    of artificial intelligence in medical diagnostics.
+                </p>
+
+                <div class="demo-features">
+                    <div class="demo-feature">
+                        <span class="demo-feature-icon">✓</span>
+                        <span>Upload mammography images (JPEG, PNG, DICOM)</span>
+                    </div>
+                    <div class="demo-feature">
+                        <span class="demo-feature-icon">✓</span>
+                        <span>Real-time AI analysis and processing</span>
+                    </div>
+                    <div class="demo-feature">
+                        <span class="demo-feature-icon">✓</span>
+                        <span>Comprehensive diagnostic reports</span>
+                    </div>
+                    <div class="demo-feature">
+                        <span class="demo-feature-icon">✓</span>
+                        <span>BI-RADS classification and recommendations</span>
+                    </div>
+                </div>
+
+                <div class="demo-actions">
+                    <a href="index.html" class="btn btn-primary btn-lg">
+                        🚀 Try Live Demo
+                    </a>
+                    <button class="btn btn-secondary btn-lg" id="sample-report-btn">
+                        📄 View Sample Report
+                    </button>
+                </div>
+            </div>
+
+            <div class="demo-visual">
+                <div class="demo-workflow">
+                    <div class="workflow-step active" data-step="1">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h4>Upload Image</h4>
+                            <p>Drag & drop mammography files</p>
+                        </div>
+                    </div>
+                    <div class="workflow-arrow">→</div>
+                    <div class="workflow-step" data-step="2">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>AI Analysis</h4>
+                            <p>Deep learning processing</p>
+                        </div>
+                    </div>
+                    <div class="workflow-arrow">→</div>
+                    <div class="workflow-step" data-step="3">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>Get Report</h4>
+                            <p>Comprehensive results</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive Demo Visualization -->
+                <div class="demo-visualization" style="margin-top: var(--spacing-xl);">
+                    <div class="viz-container glass-card" style="padding: var(--spacing-xl);">
+                        <h4 style="text-align: center; margin-bottom: var(--spacing-lg); color: var(--primary-blue);">
+                            Live Processing Simulation
+                        </h4>
+
+                        <div class="processing-stages">
+                            <div class="stage" id="stage-upload">
+                                <div class="stage-icon">📤</div>
+                                <div class="stage-label">Upload</div>
+                                <div class="stage-status">Ready</div>
+                            </div>
+
+                            <div class="stage" id="stage-analysis">
+                                <div class="stage-icon">🤖</div>
+                                <div class="stage-label">AI Analysis</div>
+                                <div class="stage-status">Waiting</div>
+                            </div>
+
+                            <div class="stage" id="stage-report">
+                                <div class="stage-icon">📋</div>
+                                <div class="stage-label">Report</div>
+                                <div class="stage-status">Pending</div>
+                            </div>
+                        </div>
+
+                        <div class="demo-controls" style="text-align: center; margin-top: var(--spacing-lg);">
+                            <button class="btn btn-primary" id="simulate-processing">
+                                ▶️ Simulate Processing
+                            </button>
+                            <button class="btn btn-secondary" id="reset-simulation" style="display: none;">
+                                🔄 Reset
+                            </button>
+                        </div>
+
+                        <div class="simulation-log" id="simulation-log"
+                            style="display: none; margin-top: var(--spacing-lg);">
+                            <h5 style="color: var(--primary-blue); margin-bottom: var(--spacing-md);">Processing Log:
+                            </h5>
+                            <div class="log-content"
+                                style="background: var(--light-gray); padding: var(--spacing-md); border-radius: var(--radius-md); font-family: var(--font-mono); font-size: 0.875rem; max-height: 200px; overflow-y: auto;">
+                                <!-- Log entries will be added here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+// Demo workflow animation and simulation
+document.addEventListener('DOMContentLoaded', function() {
+    let currentStep = 0;
+    let isSimulating = false;
+    
+    // Animate workflow steps
+    function animateWorkflow() {
+        const steps = document.querySelectorAll('.workflow-step');
+        
+        steps.forEach(step => step.classList.remove('active'));
+        steps[currentStep].classList.add('active');
+        currentStep = (currentStep + 1) % steps.length;
+    }
+
+    // Start workflow animation
+    setInterval(animateWorkflow, 3000);
+
+    // Processing simulation
+    const simulateBtn = document.getElementById('simulate-processing');
+    const resetBtn = document.getElementById('reset-simulation');
+    const simulationLog = document.getElementById('simulation-log');
+    const logContent = document.querySelector('.log-content');
+
+    if (simulateBtn) {
+        simulateBtn.addEventListener('click', startSimulation);
+    }
+
+    if (resetBtn) {
+        resetBtn.addEventListener('click', resetSimulation);
+    }
+
+    function startSimulation() {
+        if (isSimulating) return;
+        
+        isSimulating = true;
+        simulateBtn.style.display = 'none';
+        resetBtn.style.display = 'inline-flex';
+        simulationLog.style.display = 'block';
+        logContent.innerHTML = '';
+
+        const stages = [
+            {
+                id: 'stage-upload',
+                steps: [
+                    { status: 'Validating file format...', delay: 500 },
+                    { status: 'Checking file size...', delay: 300 },
+                    { status: 'Upload complete ✓', delay: 200, final: true }
+                ]
+            },
+            {
+                id: 'stage-analysis',
+                steps: [
+                    { status: 'Initializing AI model...', delay: 800 },
+                    { status: 'Preprocessing image...', delay: 600 },
+                    { status: 'Running density analysis...', delay: 1200 },
+                    { status: 'Calculating BI-RADS category...', delay: 800 },
+                    { status: 'Analysis complete ✓', delay: 300, final: true }
+                ]
+            },
+            {
+                id: 'stage-report',
+                steps: [
+                    { status: 'Generating report structure...', delay: 400 },
+                    { status: 'Formatting clinical findings...', delay: 600 },
+                    { status: 'Adding recommendations...', delay: 400 },
+                    { status: 'Report ready ✓', delay: 200, final: true }
+                ]
+            }
+        ];
+
+        processStages(stages, 0);
+    }
+
+    function processStages(stages, stageIndex) {
+        if (stageIndex >= stages.length) {
+            addLogEntry('🎉 Processing completed successfully!', 'success');
+            isSimulating = false;
+            return;
+        }
+
+        const stage = stages[stageIndex];
+        const stageElement = document.getElementById(stage.id);
+        
+        // Activate current stage
+        stageElement.classList.add('active');
+        updateStageStatus(stage.id, 'Processing...');
+
+        processSteps(stage.steps, 0, () => {
+            // Stage completed
+            stageElement.classList.remove('active');
+            stageElement.classList.add('completed');
+            
+            // Process next stage
+            setTimeout(() => {
+                processStages(stages, stageIndex + 1);
+            }, 500);
+        });
+    }
+
+    function processSteps(steps, stepIndex, onComplete) {
+        if (stepIndex >= steps.length) {
+            onComplete();
+            return;
+        }
+
+        const step = steps[stepIndex];
+        addLogEntry(step.status);
+        
+        if (step.final) {
+            // Update stage status to completed
+            const stageId = getCurrentStageId(stepIndex);
+            if (stageId) {
+                updateStageStatus(stageId, 'Complete');
+            }
+        }
+
+        setTimeout(() => {
+            processSteps(steps, stepIndex + 1, onComplete);
+        }, step.delay);
+    }
+
+    function getCurrentStageId(stepIndex) {
+        // This would need to be properly mapped based on the current stage
+        // For simplicity, we'll determine it from context
+        return null;
+    }
+
+    function updateStageStatus(stageId, status) {
+        const stageElement = document.getElementById(stageId);
+        if (stageElement) {
+            const statusElement = stageElement.querySelector('.stage-status');
+            if (statusElement) {
+                statusElement.textContent = status;
+            }
+        }
+    }
+
+    function addLogEntry(message, type = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        const entry = document.createElement('div');
+        entry.style.marginBottom = '4px';
+        entry.style.color = type === 'success' ? 'var(--success-green)' : 'var(--text-dark)';
+        entry.innerHTML = `<span style="color: var(--dark-gray);">[${timestamp}]</span> ${message}`;
+        
+        logContent.appendChild(entry);
+        logContent.scrollTop = logContent.scrollHeight;
+    }
+
+    function resetSimulation() {
+        isSimulating = false;
+        simulateBtn.style.display = 'inline-flex';
+        resetBtn.style.display = 'none';
+        simulationLog.style.display = 'none';
+
+        // Reset all stages
+        document.querySelectorAll('.stage').forEach(stage => {
+            stage.classList.remove('active', 'completed');
+            const statusElement = stage.querySelector('.stage-status');
+            if (statusElement) {
+                const labels = ['Ready', 'Waiting', 'Pending'];
+                const index = Array.from(stage.parentNode.children).indexOf(stage);
+                statusElement.textContent = labels[index] || 'Ready';
+            }
+        });
+    }
+});
+</script>
+
+<style>
+    .processing-stages {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        margin: var(--spacing-lg) 0;
+    }
+
+    .stage {
+        text-align: center;
+        padding: var(--spacing-lg);
+        border-radius: var(--radius-lg);
+        transition: all 0.3s ease;
+        min-width: 120px;
+    }
+
+    .stage.active {
+        background: rgba(0, 102, 204, 0.1);
+        border: 2px solid var(--primary-blue);
+    }
+
+    .stage.completed {
+        background: rgba(23, 162, 184, 0.1);
+        border: 2px solid var(--success-green);
+    }
+
+    .stage-icon {
+        font-size: 2rem;
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .stage-label {
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: var(--spacing-xs);
+    }
+
+    .stage-status {
+        font-size: 0.875rem;
+        color: var(--dark-gray);
+    }
+
+    .stage.active .stage-status {
+        color: var(--primary-blue);
+        font-weight: 500;
+    }
+
+    .stage.completed .stage-status {
+        color: var(--success-green);
+        font-weight: 500;
+    }
+
+    @media (max-width: 768px) {
+        .processing-stages {
+            flex-direction: column;
+            gap: var(--spacing-lg);
+        }
+
+        .stage {
+            width: 100%;
+            max-width: 200px;
+        }
+    }
+</style>

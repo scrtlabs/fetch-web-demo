@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Diagnostics Platform Demo - AI-Powered Breast Density Analysis</title>
+
+    <!-- Meta Information -->
+    <meta name="description"
+        content="Experience our cutting-edge AI-powered medical diagnostics platform. Upload mammography images and receive instant breast density analysis with BI-RADS classification.">
+    <meta name="keywords"
+        content="AI medical diagnostics, breast density analysis, mammography AI, BI-RADS classification, medical imaging demo">
+    <meta name="author" content="Medical Diagnostics Platform">
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="AI-Powered Medical Diagnostics Demo">
+    <meta property="og:description"
+        content="Revolutionary AI system for breast density classification and mammography analysis">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%230066cc'/><path d='M35 45h30v10H35z' fill='white'/><path d='M45 35h10v30H45z' fill='white'/></svg>">
+
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/medical-theme.css">
+    <link rel="stylesheet" href="css/demo-styles.css">
+
+    <!-- Font Loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-background">
+            <div class="hero-gradient"></div>
+            <div class="hero-particles"></div>
+        </div>
+
+        <div class="container">
+            <div class="hero-content">
+                <!-- Hero Header -->
+                <div class="hero-header">
+                    <div class="hero-badge">
+                        <span class="badge badge-primary">🚀 AI-Powered</span>
+                        <span class="badge badge-success">✨ Demo Ready</span>
+                    </div>
+
+                    <h1 class="hero-title">
+                        Revolutionary <span class="gradient-text">AI Medical Diagnostics</span>
+                    </h1>
+
+                    <p class="hero-subtitle">
+                        Experience the future of medical imaging with our advanced AI system that provides
+                        instant breast density classification, BI-RADS categorization, and comprehensive
+                        diagnostic reports for mammography analysis.
+                    </p>
+                </div>
+
+                <!-- Hero Actions -->
+                <div class="hero-actions">
+                    <a href="index.html" class="btn btn-primary btn-lg hero-cta">
+                        🏥 Launch Platform
+                    </a>
+                    <button class="btn btn-secondary btn-lg" id="demo-tour-btn">
+                        🎯 Take Demo Tour
+                    </button>
+                </div>
+
+                <!-- Hero Stats -->
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">99.2%</div>
+                        <div class="stat-label">Accuracy Rate</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">&lt;30s</div>
+                        <div class="stat-label">Analysis Time</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">50K+</div>
+                        <div class="stat-label">Images Analyzed</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">BI-RADS</div>
+                        <div class="stat-label">Compliant</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hero Visual -->
+            <div class="hero-visual">
+                <div class="platform-preview">
+                    <div class="preview-window glass-card">
+                        <div class="preview-header">
+                            <div class="window-controls">
+                                <span class="control close"></span>
+                                <span class="control minimize"></span>
+                                <span class="control maximize"></span>
+                            </div>
+                            <div class="window-title">Medical Diagnostics Platform</div>
+                        </div>
+                        <div class="preview-content">
+                            <div class="preview-dashboard">
+                                <div class="preview-sidebar">
+                                    <div class="sidebar-item active">📊 Dashboard</div>
+                                    <div class="sidebar-item">📋 Reports</div>
+                                    <div class="sidebar-item">⚙️ Settings</div>
+                                </div>
+                                <div class="preview-main">
+                                    <div class="preview-cards">
+                                        <div class="preview-card">
+                                            <div class="card-status completed"></div>
+                                            <div class="card-content">
+                                                <div class="card-title">Mammogram_001.jpg</div>
+                                                <div class="card-meta">BI-RADS Category B</div>
+                                            </div>
+                                        </div>
+                                        <div class="preview-card">
+                                            <div class="card-status processing"></div>
+                                            <div class="card-content">
+                                                <div class="card-title">Mammogram_002.jpg</div>
+                                                <div class="card-meta">Analyzing...</div>
+                                            </div>
+                                        </div>
+                                        <div class="preview-card">
+                                            <div class="card-status pending"></div>
+                                            <div class="card-content">
+                                                <div class="card-title">Mammogram_003.jpg</div>
+                                                <div class="card-meta">Queued</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Include other sections -->
+    <div id="features-section-container"></div>
+    <div id="demo-section-container"></div>
+    <div id="specs-section-container"></div>
+    <div id="cta-section-container"></div>
+    <div id="footer-container"></div>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="contact-modal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Contact Sales Team</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Interested in implementing our AI diagnostic platform at your healthcare facility?</p>
+                <form class="contact-form">
+                    <div class="form-group">
+                        <label class="form-label">Name *</label>
+                        <input type="text" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email *</label>
+                        <input type="email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Institution</label>
+                        <input type="text" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Message</label>
+                        <textarea class="form-control" rows="4" placeholder="Tell us about your needs..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="close-contact">Cancel</button>
+                <button class="btn btn-primary" id="send-contact">Send Message</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- JavaScript Files -->
+    <script src="js/storage.js"></script>
+    <script src="js/demo-main.js"></script>
+
+    <!-- Section Loading Script -->
+    <script>
+        // Load sections dynamically
+        async function loadSection(sectionFile, containerId) {
+            try {
+                const response = await fetch(sectionFile);
+                const html = await response.text();
+                document.getElementById(containerId).innerHTML = html;
+            } catch (error) {
+                console.error(`Failed to load ${sectionFile}:`, error);
+            }
+        }
+
+        // Load all sections when DOM is ready
+        document.addEventListener('DOMContentLoaded', async function () {
+            // Load sections in order
+            await loadSection('demo-features.html', 'features-section-container');
+            await loadSection('demo-workflow.html', 'demo-section-container');
+            await loadSection('demo-specs.html', 'specs-section-container');
+            await loadSection('demo-cta.html', 'cta-section-container');
+            await loadSection('demo-footer.html', 'footer-container');
+
+            // Initialize demo page after all sections are loaded
+            if (window.DemoPage) {
+                new window.DemoPage();
+            }
+        });
+
+        // Initialize hero animations immediately
+        document.addEventListener('DOMContentLoaded', function () {
+            // Create particles
+            createParticles();
+
+            // Animate preview cards
+            animatePreviewCards();
+        });
+
+        function createParticles() {
+            const particlesContainer = document.querySelector('.hero-particles');
+
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 20 + 's';
+                particle.style.animationDuration = (Math.random() * 10 + 10) + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        function animatePreviewCards() {
+            const cards = document.querySelectorAll('.preview-card');
+
+            setInterval(() => {
+                cards.forEach((card, index) => {
+                    const status = card.querySelector('.card-status');
+
+                    // Cycle through different states
+                    setTimeout(() => {
+                        status.className = 'card-status ' +
+                            ['completed', 'processing', 'pending'][Math.floor(Math.random() * 3)];
+                    }, index * 500);
+                });
+            }, 5000);
+        }
+    </script>
+</body>
+
+</html>

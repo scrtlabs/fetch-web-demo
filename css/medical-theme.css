@@ -1,0 +1,575 @@
+/* Medical Diagnostics Platform - Medical Theme Styles */
+
+/* Report Viewer Layout */
+.report-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-xl);
+    min-height: calc(100vh - 140px);
+    padding: var(--spacing-xl) 0;
+  }
+  
+  .image-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .report-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Image Viewer */
+  .image-viewer {
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #000;
+  }
+  
+  .image-viewer-header {
+    background: rgba(0, 0, 0, 0.8);
+    color: var(--white);
+    padding: var(--spacing-md) var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 10;
+  }
+  
+  .image-title {
+    font-size: 1rem;
+    font-weight: 500;
+    margin: 0;
+  }
+  
+  .image-controls {
+    display: flex;
+    gap: var(--spacing-sm);
+  }
+  
+  .image-control-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--white);
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-size: 0.875rem;
+    min-width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .image-control-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+  
+  .image-display {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+  }
+  
+  .medical-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transition: transform var(--transition-normal);
+    cursor: grab;
+  }
+  
+  .medical-image.zoomed {
+    cursor: grabbing;
+  }
+  
+  .image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 5;
+  }
+  
+  .zoom-indicator {
+    position: absolute;
+    bottom: var(--spacing-md);
+    left: var(--spacing-md);
+    background: rgba(0, 0, 0, 0.7);
+    color: var(--white);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+  }
+  
+  /* Report Content */
+  .report-header {
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--medium-gray);
+    background: linear-gradient(135deg, var(--primary-blue), var(--accent-blue));
+    color: var(--white);
+  }
+  
+  .report-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-sm);
+  }
+  
+  .report-meta {
+    display: flex;
+    gap: var(--spacing-lg);
+    font-size: 0.875rem;
+    opacity: 0.9;
+  }
+  
+  .report-meta-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+  }
+  
+  .report-content {
+    flex: 1;
+    padding: var(--spacing-lg);
+    overflow-y: auto;
+    line-height: 1.7;
+  }
+  
+  /* Medical Report Markdown Styling */
+  .medical-report {
+    font-family: var(--font-primary);
+    line-height: 1.7;
+    color: var(--text-dark);
+  }
+  
+  .medical-report h1,
+  .medical-report h2,
+  .medical-report h3,
+  .medical-report h4,
+  .medical-report h5,
+  .medical-report h6 {
+    color: var(--primary-blue);
+    font-weight: 600;
+    margin-top: var(--spacing-xl);
+    margin-bottom: var(--spacing-md);
+    border-bottom: 2px solid var(--secondary-blue);
+    padding-bottom: var(--spacing-sm);
+  }
+  
+  .medical-report h1 {
+    font-size: 1.75rem;
+    border-bottom-width: 3px;
+  }
+  
+  .medical-report h2 {
+    font-size: 1.5rem;
+  }
+  
+  .medical-report h3 {
+    font-size: 1.25rem;
+    border-bottom: 1px solid var(--secondary-blue);
+  }
+  
+  .medical-report h4 {
+    font-size: 1.125rem;
+    border-bottom: 1px solid var(--medium-gray);
+  }
+  
+  .medical-report p {
+    margin-bottom: var(--spacing-md);
+    text-align: justify;
+  }
+  
+  .medical-report strong {
+    font-weight: 600;
+    color: var(--primary-blue-dark);
+  }
+  
+  .medical-report em {
+    font-style: italic;
+    color: var(--dark-gray);
+  }
+  
+  /* Medical Lists */
+  .medical-report ul,
+  .medical-report ol {
+    margin-bottom: var(--spacing-md);
+    padding-left: var(--spacing-xl);
+  }
+  
+  .medical-report li {
+    margin-bottom: var(--spacing-sm);
+    line-height: 1.6;
+  }
+  
+  .medical-report ul li {
+    position: relative;
+  }
+  
+  .medical-report ul li::before {
+    content: '•';
+    color: var(--primary-blue);
+    font-weight: 600;
+    position: absolute;
+    left: -var(--spacing-md);
+  }
+  
+  /* Medical Tables */
+  .medical-report table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: var(--spacing-lg) 0;
+    background: var(--white);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .medical-report th,
+  .medical-report td {
+    padding: var(--spacing-md);
+    text-align: left;
+    border-bottom: 1px solid var(--medium-gray);
+  }
+  
+  .medical-report th {
+    background: var(--secondary-blue);
+    color: var(--primary-blue-dark);
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  
+  .medical-report td {
+    font-size: 0.875rem;
+  }
+  
+  .medical-report tr:hover {
+    background: var(--off-white);
+  }
+  
+  /* Medical Code Blocks */
+  .medical-report code {
+    background: var(--light-gray);
+    color: var(--primary-blue-dark);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+  }
+  
+  .medical-report pre {
+    background: var(--light-gray);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    margin: var(--spacing-lg) 0;
+    border-left: 4px solid var(--primary-blue);
+  }
+  
+  .medical-report pre code {
+    background: none;
+    padding: 0;
+  }
+  
+  /* Medical Blockquotes */
+  .medical-report blockquote {
+    background: var(--secondary-blue);
+    border-left: 4px solid var(--primary-blue);
+    padding: var(--spacing-lg);
+    margin: var(--spacing-lg) 0;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    font-style: italic;
+    color: var(--primary-blue-dark);
+  }
+  
+  .medical-report blockquote p:last-child {
+    margin-bottom: 0;
+  }
+  
+  /* Medical Findings Sections */
+  .findings-section {
+    background: var(--off-white);
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    margin: var(--spacing-lg) 0;
+    position: relative;
+  }
+  
+  .findings-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--primary-blue);
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  }
+  
+  .findings-title {
+    color: var(--primary-blue);
+    font-weight: 600;
+    margin-bottom: var(--spacing-md);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
+  
+  .severity-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: var(--spacing-sm);
+  }
+  
+  .severity-low { background: var(--success-green); }
+  .severity-medium { background: var(--warning-orange); }
+  .severity-high { background: var(--error-red); }
+  
+  /* Medical Navigation */
+  .report-navigation {
+    background: var(--light-gray);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--medium-gray);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+  }
+  
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: 0.875rem;
+  }
+  
+  .breadcrumb-item {
+    color: var(--dark-gray);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+  }
+  
+  .breadcrumb-item:hover {
+    color: var(--primary-blue);
+  }
+  
+  .breadcrumb-item.active {
+    color: var(--text-dark);
+    font-weight: 500;
+  }
+  
+  .breadcrumb-separator {
+    color: var(--dark-gray);
+    margin: 0 var(--spacing-xs);
+  }
+  
+  .report-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+  }
+  
+  /* Print Styles */
+  @media print {
+    .report-container {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    
+    .image-panel {
+      display: none;
+    }
+    
+    .report-panel {
+      box-shadow: none;
+      border: none;
+      background: var(--white);
+    }
+    
+    .report-header {
+      background: var(--white) !important;
+      color: var(--text-dark) !important;
+    }
+    
+    .report-navigation,
+    .image-controls,
+    .btn {
+      display: none !important;
+    }
+    
+    .medical-report {
+      font-size: 12pt;
+      line-height: 1.5;
+    }
+    
+    .medical-report h1,
+    .medical-report h2,
+    .medical-report h3 {
+      break-after: avoid;
+    }
+    
+    .findings-section {
+      break-inside: avoid;
+    }
+  }
+  
+  /* DICOM Viewer Specific */
+  .dicom-viewer {
+    background: #000;
+    color: var(--white);
+  }
+  
+  .dicom-info {
+    position: absolute;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    background: rgba(0, 0, 0, 0.7);
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    z-index: 10;
+  }
+  
+  .dicom-measurements {
+    position: absolute;
+    bottom: var(--spacing-md);
+    right: var(--spacing-md);
+    background: rgba(0, 0, 0, 0.7);
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    z-index: 10;
+  }
+  
+  /* Medical Icons */
+  .medical-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: var(--primary-blue);
+    color: var(--white);
+    border-radius: 4px;
+    font-size: 0.75rem;
+  }
+  
+  .medical-icon.stethoscope::before { content: '🩺'; }
+  .medical-icon.xray::before { content: '🩻'; }
+  .medical-icon.report::before { content: '📋'; }
+  .medical-icon.calendar::before { content: '📅'; }
+  .medical-icon.time::before { content: '⏰'; }
+  .medical-icon.patient::before { content: '👤'; }
+  
+  /* Responsive Medical Layout */
+  @media (max-width: 1024px) {
+    .report-container {
+      grid-template-columns: 1fr;
+      gap: var(--spacing-lg);
+    }
+    
+    .image-panel {
+      order: 2;
+      max-height: 400px;
+    }
+    
+    .report-panel {
+      order: 1;
+    }
+    
+    .image-viewer-header {
+      padding: var(--spacing-sm) var(--spacing-md);
+    }
+    
+    .image-controls {
+      flex-wrap: wrap;
+      gap: var(--spacing-xs);
+    }
+    
+    .image-control-btn {
+      min-width: 32px;
+      height: 32px;
+      font-size: 0.75rem;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .report-header {
+      padding: var(--spacing-md);
+    }
+    
+    .report-content {
+      padding: var(--spacing-md);
+    }
+    
+    .report-meta {
+      flex-direction: column;
+      gap: var(--spacing-sm);
+    }
+    
+    .report-navigation {
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--spacing-sm);
+    }
+    
+    .breadcrumb {
+      justify-content: center;
+    }
+    
+    .report-actions {
+      justify-content: center;
+    }
+    
+    .medical-report h1 {
+      font-size: 1.5rem;
+    }
+    
+    .medical-report h2 {
+      font-size: 1.25rem;
+    }
+    
+    .medical-report table {
+      font-size: 0.75rem;
+    }
+    
+    .medical-report th,
+    .medical-report td {
+      padding: var(--spacing-sm);
+    }
+    
+    .findings-section {
+      padding: var(--spacing-md);
+    }
+  }
