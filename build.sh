@@ -1,5 +1,5 @@
 #!/bin/bash
-# build.sh - Build and run the Medical Diagnostics Platform
+# build.sh - Build and run Fetch Medical Diagnostics Demo
 
 set -e
 
