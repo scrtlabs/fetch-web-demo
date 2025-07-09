@@ -621,6 +621,7 @@ class ReportModal extends BaseModal {
                     <div class="report-actions">
                         <button class="btn btn-sm btn-secondary" id="print-report">🖨️ Print</button>
                         <button class="btn btn-sm btn-secondary" id="export-report">📄 Export</button>
+                        <button class="btn btn-sm btn-secondary" id="download-pdf-report">📥 Download as PDF</button>
                         <button class="modal-close">&times;</button>
                     </div>
                 </div>
@@ -704,6 +705,7 @@ class ReportModal extends BaseModal {
         // Action buttons
         modal.querySelector('#print-report').addEventListener('click', () => this.printReport());
         modal.querySelector('#export-report').addEventListener('click', () => this.exportReport());
+        modal.querySelector('#download-pdf-report').addEventListener('click', () => this.downloadPDFReport());
     }
 
     initialize(request) {
@@ -899,6 +901,35 @@ class ReportModal extends BaseModal {
             URL.revokeObjectURL(url);
         }
     }
+
+    /**
+     * Download PDF report from assets
+     */
+    downloadPDFReport() {
+        try {
+            // Create a link to download the static PDF file
+            const link = document.createElement('a');
+            link.href = 'assets/report.pdf';
+            link.download = `medical_report_${this.currentRequest ? this.currentRequest.id : 'sample'}.pdf`;
+            link.style.display = 'none';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Show success toast if available
+            if (window.app && typeof window.app.showToast === 'function') {
+                window.app.showToast('success', 'Download Started', 'PDF report download has been initiated.');
+            }
+        } catch (error) {
+            console.error('❌ Error downloading PDF:', error);
+
+            // Show error toast if available
+            if (window.app && typeof window.app.showToast === 'function') {
+                window.app.showToast('error', 'Download Failed', 'Failed to download PDF report. Please try again.');
+            }
+        }
+    }
 }
 
 /**
@@ -969,7 +1000,449 @@ class ToastManager {
     }
 }
 
+/**
+ * Confirmation Modal for critical actions
+ */
+class ConfirmationModal extends BaseModal {
+    constructor() {
+        super('confirmation-modal');
+        this.confirmCallback = null;
+        this.cancelCallback = null;
+    }
+
+    getTemplate() {
+        return `
+            <div class="modal" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="confirm-title">Confirm Action</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="confirm-content">
+                        <div class="confirm-icon" id="confirm-icon">⚠️</div>
+                        <div class="confirm-message" id="confirm-message">
+                            Are you sure you want to perform this action?
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" id="confirm-cancel">Cancel</button>
+                    <button class="btn btn-danger" id="confirm-ok">Confirm</button>
+                </div>
+            </div>
+        `;
+    }
+
+    setupEventListeners(modal) {
+        super.setupEventListeners(modal);
+
+        modal.querySelector('#confirm-cancel').addEventListener('click', () => {
+            this.close();
+            if (this.cancelCallback) {
+                this.cancelCallback();
+            }
+        });
+
+        modal.querySelector('#confirm-ok').addEventListener('click', () => {
+            this.close();
+            if (this.confirmCallback) {
+                this.confirmCallback();
+            }
+        });
+    }
+
+    show(options = {}) {
+        const {
+            title = 'Confirm Action',
+            message = 'Are you sure you want to perform this action?',
+            icon = '⚠️',
+            confirmText = 'Confirm',
+            cancelText = 'Cancel',
+            confirmClass = 'btn-danger',
+            onConfirm = null,
+            onCancel = null
+        } = options;
+
+        this.confirmCallback = onConfirm;
+        this.cancelCallback = onCancel;
+
+        this.open();
+
+        // Update content
+        const modal = this.element;
+        modal.querySelector('#confirm-title').textContent = title;
+        modal.querySelector('#confirm-message').textContent = message;
+        modal.querySelector('#confirm-icon').textContent = icon;
+        modal.querySelector('#confirm-ok').textContent = confirmText;
+        modal.querySelector('#confirm-cancel').textContent = cancelText;
+
+        // Update button style
+        const confirmBtn = modal.querySelector('#confirm-ok');
+        confirmBtn.className = `btn ${confirmClass}`;
+    }
+}
+
+/**
+ * Loading Modal for long-running operations
+ */
+class LoadingModal extends BaseModal {
+    constructor() {
+        super('loading-modal', {
+            closable: false,
+            backdrop: false,
+            keyboard: false
+        });
+        this.progress = 0;
+    }
+
+    getTemplate() {
+        return `
+            <div class="modal" style="max-width: 400px;">
+                <div class="modal-body" style="text-align: center; padding: var(--spacing-xxl);">
+                    <div class="loading-content">
+                        <div class="loading-spinner" style="margin: 0 auto var(--spacing-lg);"></div>
+                        <h3 id="loading-title">Processing...</h3>
+                        <p id="loading-message">Please wait while we process your request.</p>
+                        <div class="progress-bar" id="loading-progress-bar" style="display: none;">
+                            <div class="progress-fill" id="loading-progress-fill" style="width: 0%;"></div>
+                        </div>
+                        <div id="loading-percentage" style="margin-top: var(--spacing-md); display: none;">0%</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    show(options = {}) {
+        const {
+            title = 'Processing...',
+            message = 'Please wait while we process your request.',
+            showProgress = false
+        } = options;
+
+        this.open();
+
+        const modal = this.element;
+        modal.querySelector('#loading-title').textContent = title;
+        modal.querySelector('#loading-message').textContent = message;
+
+        const progressBar = modal.querySelector('#loading-progress-bar');
+        const percentage = modal.querySelector('#loading-percentage');
+
+        if (showProgress) {
+            progressBar.style.display = 'block';
+            percentage.style.display = 'block';
+        } else {
+            progressBar.style.display = 'none';
+            percentage.style.display = 'none';
+        }
+
+        this.progress = 0;
+        this.updateProgress(0);
+    }
+
+    updateProgress(progress) {
+        this.progress = Math.max(0, Math.min(100, progress));
+
+        const modal = this.element;
+        const progressFill = modal.querySelector('#loading-progress-fill');
+        const percentage = modal.querySelector('#loading-percentage');
+
+        if (progressFill) {
+            progressFill.style.width = `${this.progress}%`;
+        }
+
+        if (percentage) {
+            percentage.textContent = `${Math.round(this.progress)}%`;
+        }
+    }
+
+    updateMessage(message) {
+        const modal = this.element;
+        const messageElement = modal.querySelector('#loading-message');
+        if (messageElement) {
+            messageElement.textContent = message;
+        }
+    }
+}
+
+/**
+ * Image Preview Modal for viewing medical images
+ */
+class ImagePreviewModal extends BaseModal {
+    constructor() {
+        super('image-preview-modal');
+        this.imageZoom = 1;
+        this.imagePosition = { x: 0, y: 0 };
+        this.isDragging = false;
+        this.currentImage = null;
+    }
+
+    getTemplate() {
+        return `
+            <div class="modal" style="max-width: 90vw; max-height: 90vh; width: 1000px;">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="image-preview-title">Image Preview</h3>
+                    <div class="image-preview-controls">
+                        <button class="btn btn-sm btn-secondary" id="zoom-out-preview">−</button>
+                        <button class="btn btn-sm btn-secondary" id="zoom-reset-preview">⌂</button>
+                        <button class="btn btn-sm btn-secondary" id="zoom-in-preview">+</button>
+                        <button class="btn btn-sm btn-secondary" id="download-image-preview">⬇</button>
+                        <button class="modal-close">&times;</button>
+                    </div>
+                </div>
+                <div class="modal-body" style="padding: 0; background: #000;">
+                    <div class="image-preview-container" style="position: relative; min-height: 400px; display: flex; align-items: center; justify-content: center;">
+                        <img id="preview-image" class="preview-image" alt="Medical Image Preview" style="max-width: 100%; max-height: 70vh; object-fit: contain; transition: transform 0.3s ease;">
+                        <div class="zoom-indicator-preview" style="position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.7); color: white; padding: 8px 12px; border-radius: 4px; font-family: monospace;">100%</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    setupEventListeners(modal) {
+        super.setupEventListeners(modal);
+
+        // Zoom controls
+        modal.querySelector('#zoom-in-preview').addEventListener('click', () => this.zoomIn());
+        modal.querySelector('#zoom-out-preview').addEventListener('click', () => this.zoomOut());
+        modal.querySelector('#zoom-reset-preview').addEventListener('click', () => this.resetZoom());
+        modal.querySelector('#download-image-preview').addEventListener('click', () => this.downloadImage());
+
+        // Image interaction
+        const container = modal.querySelector('.image-preview-container');
+        container.addEventListener('mousedown', (e) => this.startDrag(e));
+        container.addEventListener('mousemove', (e) => this.drag(e));
+        container.addEventListener('mouseup', () => this.endDrag());
+        container.addEventListener('mouseleave', () => this.endDrag());
+
+        // Mouse wheel zoom
+        container.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            if (e.deltaY < 0) {
+                this.zoomIn();
+            } else {
+                this.zoomOut();
+            }
+        });
+    }
+
+    show(imageData, title = 'Medical Image') {
+        this.currentImage = imageData;
+        this.open();
+
+        const modal = this.element;
+        modal.querySelector('#image-preview-title').textContent = title;
+        modal.querySelector('#preview-image').src = imageData;
+
+        this.resetZoom();
+    }
+
+    zoomIn() {
+        this.imageZoom = Math.min(this.imageZoom * 1.2, 5);
+        this.updateImageTransform();
+    }
+
+    zoomOut() {
+        this.imageZoom = Math.max(this.imageZoom / 1.2, 0.1);
+        this.updateImageTransform();
+    }
+
+    resetZoom() {
+        this.imageZoom = 1;
+        this.imagePosition = { x: 0, y: 0 };
+        this.updateImageTransform();
+    }
+
+    updateImageTransform() {
+        const image = this.element.querySelector('#preview-image');
+        const zoomIndicator = this.element.querySelector('.zoom-indicator-preview');
+
+        if (image) {
+            image.style.transform = `translate(${this.imagePosition.x}px, ${this.imagePosition.y}px) scale(${this.imageZoom})`;
+        }
+
+        if (zoomIndicator) {
+            zoomIndicator.textContent = Math.round(this.imageZoom * 100) + '%';
+        }
+    }
+
+    startDrag(e) {
+        if (this.imageZoom > 1) {
+            this.isDragging = true;
+            this.lastMousePos = { x: e.clientX, y: e.clientY };
+            e.preventDefault();
+        }
+    }
+
+    drag(e) {
+        if (this.isDragging && this.imageZoom > 1) {
+            const deltaX = e.clientX - this.lastMousePos.x;
+            const deltaY = e.clientY - this.lastMousePos.y;
+
+            this.imagePosition.x += deltaX;
+            this.imagePosition.y += deltaY;
+
+            this.lastMousePos = { x: e.clientX, y: e.clientY };
+            this.updateImageTransform();
+        }
+    }
+
+    endDrag() {
+        this.isDragging = false;
+    }
+
+    downloadImage() {
+        if (this.currentImage) {
+            const link = document.createElement('a');
+            link.href = this.currentImage;
+            link.download = 'medical_image.jpg';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+}
+
+/**
+ * Settings Modal for application configuration
+ */
+class SettingsModal extends BaseModal {
+    constructor() {
+        super('settings-modal');
+        this.settings = {
+            theme: 'light',
+            notifications: true,
+            autoRefresh: true,
+            defaultView: 'grid',
+            itemsPerPage: 20
+        };
+    }
+
+    getTemplate() {
+        return `
+            <div class="modal" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h3 class="modal-title">Settings</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-content">
+                        <div class="settings-section">
+                            <h4>Appearance</h4>
+                            <div class="form-group">
+                                <label class="form-label">Theme</label>
+                                <select id="theme-select" class="form-control">
+                                    <option value="light">Light</option>
+                                    <option value="dark">Dark</option>
+                                    <option value="auto">Auto</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h4>Notifications</h4>
+                            <div class="form-group">
+                                <label class="form-check">
+                                    <input type="checkbox" id="notifications-check" class="form-check-input">
+                                    <span class="form-check-label">Enable notifications</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="settings-section">
+                            <h4>Dashboard</h4>
+                            <div class="form-group">
+                                <label class="form-check">
+                                    <input type="checkbox" id="auto-refresh-check" class="form-check-input">
+                                    <span class="form-check-label">Auto-refresh data</span>
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Default view</label>
+                                <select id="default-view-select" class="form-control">
+                                    <option value="grid">Grid</option>
+                                    <option value="list">List</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Items per page</label>
+                                <select id="items-per-page-select" class="form-control">
+                                    <option value="10">10</option>
+                                    <option value="20">20</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" id="settings-cancel">Cancel</button>
+                    <button class="btn btn-primary" id="settings-save">Save Settings</button>
+                </div>
+            </div>
+        `;
+    }
+
+    setupEventListeners(modal) {
+        super.setupEventListeners(modal);
+
+        modal.querySelector('#settings-save').addEventListener('click', () => this.saveSettings());
+        modal.querySelector('#settings-cancel').addEventListener('click', () => this.close());
+    }
+
+    open() {
+        super.open();
+        this.loadSettings();
+        this.updateForm();
+    }
+
+    loadSettings() {
+        if (window.storage) {
+            this.settings = window.storage.loadSettings();
+        }
+    }
+
+    updateForm() {
+        const modal = this.element;
+        modal.querySelector('#theme-select').value = this.settings.theme;
+        modal.querySelector('#notifications-check').checked = this.settings.notifications;
+        modal.querySelector('#auto-refresh-check').checked = this.settings.autoRefresh;
+        modal.querySelector('#default-view-select').value = this.settings.defaultView;
+        modal.querySelector('#items-per-page-select').value = this.settings.itemsPerPage;
+    }
+
+    saveSettings() {
+        const modal = this.element;
+
+        this.settings = {
+            theme: modal.querySelector('#theme-select').value,
+            notifications: modal.querySelector('#notifications-check').checked,
+            autoRefresh: modal.querySelector('#auto-refresh-check').checked,
+            defaultView: modal.querySelector('#default-view-select').value,
+            itemsPerPage: parseInt(modal.querySelector('#items-per-page-select').value)
+        };
+
+        if (window.storage) {
+            window.storage.saveSettings(this.settings);
+        }
+
+        if (window.app && typeof window.app.showToast === 'function') {
+            window.app.showToast('success', 'Settings Saved', 'Your preferences have been updated.');
+        }
+
+        this.close();
+    }
+}
+
 // Export classes for global use
+window.BaseModal = BaseModal;
 window.UploadModal = UploadModal;
 window.ReportModal = ReportModal;
 window.ToastManager = ToastManager;
+window.ConfirmationModal = ConfirmationModal;
+window.LoadingModal = LoadingModal;
+window.ImagePreviewModal = ImagePreviewModal;
+window.SettingsModal = SettingsModal;
