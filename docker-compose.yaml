@@ -2,10 +2,8 @@ version: '3.8'
 
 services:
   medical-diagnostics-web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: medical-diagnostics-platform
+    image: ghcr.io/scrtlabs/fetch-web-demo:latest
+    container_name: fetch-medical
     ports:
       - "8080:80"
     volumes:
