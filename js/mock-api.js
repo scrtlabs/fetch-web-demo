@@ -329,86 +329,104 @@ ${biradsCategory === '1' ?
     }
 
     /**
-     * Generate diagnostic mammography report
-     */
+    * Generate diagnostic mammography report using template
+    */
     static generateDiagnosticReport(request) {
-        const findings = [
-            {
-                description: 'focal asymmetry in the upper outer quadrant',
-                assessment: 'BI-RADS 3',
-                recommendation: 'Short-term follow-up in 6 months'
-            },
-            {
-                description: 'cluster of punctate calcifications',
-                assessment: 'BI-RADS 4A',
-                recommendation: 'Stereotactic biopsy recommended'
-            },
-            {
-                description: 'well-circumscribed oval mass',
-                assessment: 'BI-RADS 2',
-                recommendation: 'Routine follow-up'
-            }
-        ];
-
-        const finding = findings[Math.floor(Math.random() * findings.length)];
         const reportDate = new Date(request.timestamp).toLocaleDateString();
+        const currentDate = new Date().toLocaleDateString();
+        const currentTime = new Date().toLocaleTimeString();
 
-        return `# Diagnostic Mammography Report
+        // Generate dynamic values for the report
+        const probabilityScores = {
+            benign: (Math.random() * 0.15 + 0.85).toFixed(4), // 0.85-1.0
+            malignant: (Math.random() * 0.3 + 0.7).toFixed(4), // 0.7-1.0
+            inflammatory: (Math.random() * 0.1).toFixed(4), // 0.0-0.1
+            artefactual: (Math.random() * 0.05).toFixed(4) // 0.0-0.05
+        };
+
+        const noduleSize = Math.floor(Math.random() * 15) + 8; // 8-22mm
+        const followUpMonths = Math.random() > 0.5 ? 3 : 6;
+
+        // Template from assets/template.md with variable substitution
+        const template = `# Medical Imaging Report
 
 ## Patient Information
 - **Report ID:** ${request.id}
-- **Examination Date:** ${reportDate}
-- **Study Type:** Diagnostic Bilateral Mammography
-- **Clinical Indication:** Palpable abnormality, left breast
+- **Study Date:** ${reportDate}
+- **Report Generated:** ${currentDate} at ${currentTime}
+- **Image File:** ${request.filename}
+- **Analysis Method:** AI-Assisted Breast Density Classification
 
-## Clinical History
-Patient presents with palpable thickening in the left breast upper outer quadrant, noted approximately 2 weeks ago during self-examination. No associated pain or nipple discharge.
+## Model Details
 
-## Technique
-Bilateral diagnostic mammography performed with additional magnification and spot compression views of the area of clinical concern.
+**Model Name:** Deep Convolutional Neural Network (DCNN) for Breast Density Classification
+**Model Output:** Probabilistic scores across four categories: Benign (${probabilityScores.benign}), Malignant (${probabilityScores.malignant}), Inflammatory (${probabilityScores.inflammatory}), and Artefactual (${probabilityScores.artefactual})
 
 ## Findings
+- **Key Observation 1: High probability of Benign Classification**
+- The model assigns a high probability score (${probabilityScores.benign}) to the category "Benign," indicating that the breast tissue characteristics, as analyzed by DCNN, are most consistent with normal fibroglandular tissue in this case.
+- This finding suggests minimal risk for malignancy based on imaging features; however, clinical correlation and further evaluation remain crucial, as per BI-RADS guidelines (1).
+- **Key Observation 2: Elevated probability consideration**
+- Despite the dominant benign classification, the model also returns a notable score (${probabilityScores.malignant}) for tissue density assessment, indicating that some breast tissue features require careful consideration for screening recommendations.
+- This elevated density probability mandates careful consideration of supplemental screening modalities, as dense breast tissue can mask potential lesions (2).
+- **Overall Assessment:**
+- Given the model's output, this mammographic study is categorized primarily as showing normal breast tissue composition but with density characteristics that warrant ongoing surveillance. This classification reflects the complexity of radiological interpretation in breast imaging and necessitates appropriate follow-up recommendations.
 
-### Breast Composition
-Breast composition shows scattered fibroglandular densities (BI-RADS B).
+## Clinical Context
+- **Breast Density Category:** ${['A - Almost entirely fatty', 'B - Scattered fibroglandular densities', 'C - Heterogeneously dense', 'D - Extremely dense'][Math.floor(Math.random() * 4)]}
+- **Tissue Composition:** Fibroglandular tissue comprises approximately ${Math.floor(Math.random() * 40) + 20}% of breast volume
+- **Bilateral Symmetry:** ${Math.random() > 0.3 ? 'Symmetric density distribution' : 'Mild asymmetric density noted'}
 
-### Right Breast
-No mammographic abnormalities identified. Normal mammographic appearance.
+## Impression/Conclusion
+- **Summary of Key Observations:** The DCNN-based analysis indicates normal breast tissue composition (${(parseFloat(probabilityScores.benign) * 100).toFixed(1)}% probability) with appropriate density classification for patient age and demographics.
+- **Clinical Significance and Potential Implications:**
+- Studies have shown that accurate density assessment is crucial for determining appropriate screening intervals and supplemental imaging needs (3).
+- The model's classification supports standard screening protocols while highlighting the importance of individualized risk assessment based on breast density patterns (4).
+- **Screening Recommendations:** Current imaging demonstrates findings appropriate for routine screening mammography with consideration of breast density in determining screening strategy.
+- **Recommendations for Further Evaluation/Follow-up:**
+- Continue routine annual screening mammography as clinically indicated (1).
+- Consider discussion of supplemental screening options if breast density warrants additional evaluation (5).
 
-### Left Breast
-There is a ${finding.description} measuring approximately ${Math.floor(Math.random() * 15) + 8}mm in greatest dimension, located in the upper outer quadrant corresponding to the area of clinical concern.
+## Recommendations
+- **Screening Protocol:** Annual bilateral mammography recommended per current guidelines
+- **Supplemental Imaging:** ${parseFloat(probabilityScores.benign) < 0.9 ? 'Consider breast ultrasound or MRI if clinically indicated' : 'Standard mammographic screening sufficient at this time'}
+- **Clinical Follow-up:** Routine clinical breast examination and patient education regarding breast self-awareness
+- **Next Study:** Recommend follow-up mammography in 12 months unless clinical changes warrant earlier evaluation
 
-**Detailed Analysis:**
-- Location: Upper outer quadrant, left breast
-- Size: ${Math.floor(Math.random() * 15) + 8} mm
-- Morphology: ${finding.description}
-- Associated features: No associated skin thickening or nipple retraction
+## Technical Quality Assessment
+- **Image Quality:** ${Math.random() > 0.2 ? 'Adequate for diagnostic interpretation' : 'Good technical quality with optimal positioning'}
+- **Positioning:** ${Math.random() > 0.15 ? 'Appropriate' : 'Adequate with minor positioning considerations'}
+- **Compression:** Adequate breast compression achieved
+- **Artifacts:** ${Math.random() > 0.8 ? 'Minimal motion artifact noted' : 'No significant artifacts identified'}
 
-## Assessment and Recommendation
+## Limitations
+- **Factors Limiting Interpretation:** This report relies on AI-assisted analysis and should be correlated with clinical findings and radiologist interpretation.
+- **Inherent Model Limitations:** The DCNN's performance may be affected by image quality, positioning, and individual patient factors that require clinical correlation.
+- **Clinical Context Required:** Automated classification should always be interpreted within the context of patient history, physical examination, and clinical risk factors.
 
-**${finding.assessment}:** ${finding.description}
+## Quality Assurance
+- **Algorithm Version:** DCNN v2.1.3
+- **Processing Time:** ${Math.floor(Math.random() * 45) + 15} seconds
+- **Confidence Metrics:** All quality parameters within acceptable ranges
+- **Validation Status:** Model performance validated on diverse dataset representative of screening population
 
-**Recommendation:** ${finding.recommendation}
-
-${finding.assessment === 'BI-RADS 4A' ?
-                `Given the imaging characteristics, tissue sampling is recommended to exclude malignancy. The likelihood of malignancy is estimated at 2-10%.` :
-                finding.assessment === 'BI-RADS 3' ?
-                    `The finding has a less than 2% likelihood of malignancy. Short-term mammographic follow-up is recommended to ensure stability.` :
-                    `The finding has typical benign characteristics. Routine screening mammography is appropriate.`}
-
-## Correlation
-Clinical findings correlate with mammographic abnormality in the left breast upper outer quadrant.
-
-## Communication
-Results communicated to referring physician and patient notification letter sent within 24 hours of examination.
+## References
+1. D'Orsi CJ, et al. (2013). ACR BI-RADS Atlas, Breast Imaging Reporting and Data System. Reston, VA: American College of Radiology.
+2. Boyd NF, et al. (2007). Mammographic breast density as an intermediate phenotype for breast cancer. Lancet Oncol, 8(12), 1072-1081.
+3. Kerlikowske K, et al. (2010). Identifying women with dense breasts at high risk for interval cancer: a cohort study. Ann Intern Med, 152(1), 10-17.
+4. McCormack VA, et al. (2006). Breast density and parenchymal patterns as markers of breast cancer risk: a meta-analysis. Cancer Epidemiol Biomarkers Prev, 15(6), 1159-1169.
+5. Berg WA, et al. (2012). Detection of breast cancer with addition of annual screening ultrasound or a single screening MRI to mammography in women with elevated breast cancer risk. JAMA, 307(13), 1394-1404.
 
 ---
 
-**Board Certified Radiologist:** Dr. Michael Chen, MD  
-**Report Date:** ${new Date().toLocaleDateString()}  
-**Verification:** Electronically signed
+**Report Status:** ${request.status === 'completed' ? 'Final Report' : 'Preliminary Analysis'}  
+**Generated:** ${currentDate} ${currentTime}  
+**Report ID:** ${request.id}  
+**System:** Medical Diagnostics Platform v2.1.3
 
-*Sample diagnostic report for demonstration purposes.*`;
+*This report has been generated using AI-assisted analysis for demonstration purposes. In clinical practice, all AI-generated reports should be reviewed and validated by qualified medical professionals.*`;
+
+        return template;
     }
 
     /**
