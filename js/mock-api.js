@@ -147,7 +147,8 @@ class MockAPI {
             this.generateFollowUpReport
         ];
 
-        const template = reportTemplates[Math.floor(Math.random() * reportTemplates.length)];
+        // const template = reportTemplates[Math.floor(Math.random() * reportTemplates.length)];
+        const template = this.generateDiagnosticReport;
         return template.call(this, request);
     }
 
@@ -363,52 +364,52 @@ ${biradsCategory === '1' ?
 **Model Output:** Probabilistic scores across four categories: Benign (${probabilityScores.benign}), Malignant (${probabilityScores.malignant}), Inflammatory (${probabilityScores.inflammatory}), and Artefactual (${probabilityScores.artefactual})
 
 ## Findings
-- **Key Observation 1: High probability of Benign Classification**
+**Key Observation 1: High probability of Benign Classification**
 - The model assigns a high probability score (${probabilityScores.benign}) to the category "Benign," indicating that the breast tissue characteristics, as analyzed by DCNN, are most consistent with normal fibroglandular tissue in this case.
 - This finding suggests minimal risk for malignancy based on imaging features; however, clinical correlation and further evaluation remain crucial, as per BI-RADS guidelines (1).
 - **Key Observation 2: Elevated probability consideration**
 - Despite the dominant benign classification, the model also returns a notable score (${probabilityScores.malignant}) for tissue density assessment, indicating that some breast tissue features require careful consideration for screening recommendations.
 - This elevated density probability mandates careful consideration of supplemental screening modalities, as dense breast tissue can mask potential lesions (2).
-- **Overall Assessment:**
+**Overall Assessment:**
 - Given the model's output, this mammographic study is categorized primarily as showing normal breast tissue composition but with density characteristics that warrant ongoing surveillance. This classification reflects the complexity of radiological interpretation in breast imaging and necessitates appropriate follow-up recommendations.
 
 ## Clinical Context
-- **Breast Density Category:** ${['A - Almost entirely fatty', 'B - Scattered fibroglandular densities', 'C - Heterogeneously dense', 'D - Extremely dense'][Math.floor(Math.random() * 4)]}
-- **Tissue Composition:** Fibroglandular tissue comprises approximately ${Math.floor(Math.random() * 40) + 20}% of breast volume
-- **Bilateral Symmetry:** ${Math.random() > 0.3 ? 'Symmetric density distribution' : 'Mild asymmetric density noted'}
+**Breast Density Category:** ${['A - Almost entirely fatty', 'B - Scattered fibroglandular densities', 'C - Heterogeneously dense', 'D - Extremely dense'][Math.floor(Math.random() * 4)]}
+**Tissue Composition:** Fibroglandular tissue comprises approximately ${Math.floor(Math.random() * 40) + 20}% of breast volume
+**Bilateral Symmetry:** ${Math.random() > 0.3 ? 'Symmetric density distribution' : 'Mild asymmetric density noted'}
 
 ## Impression/Conclusion
-- **Summary of Key Observations:** The DCNN-based analysis indicates normal breast tissue composition (${(parseFloat(probabilityScores.benign) * 100).toFixed(1)}% probability) with appropriate density classification for patient age and demographics.
-- **Clinical Significance and Potential Implications:**
+**Summary of Key Observations:** The DCNN-based analysis indicates normal breast tissue composition (${(parseFloat(probabilityScores.benign) * 100).toFixed(1)}% probability) with appropriate density classification for patient age and demographics.
+**Clinical Significance and Potential Implications:**
 - Studies have shown that accurate density assessment is crucial for determining appropriate screening intervals and supplemental imaging needs (3).
 - The model's classification supports standard screening protocols while highlighting the importance of individualized risk assessment based on breast density patterns (4).
-- **Screening Recommendations:** Current imaging demonstrates findings appropriate for routine screening mammography with consideration of breast density in determining screening strategy.
-- **Recommendations for Further Evaluation/Follow-up:**
+**Screening Recommendations:** Current imaging demonstrates findings appropriate for routine screening mammography with consideration of breast density in determining screening strategy.
+**Recommendations for Further Evaluation/Follow-up:**
 - Continue routine annual screening mammography as clinically indicated (1).
 - Consider discussion of supplemental screening options if breast density warrants additional evaluation (5).
 
 ## Recommendations
-- **Screening Protocol:** Annual bilateral mammography recommended per current guidelines
-- **Supplemental Imaging:** ${parseFloat(probabilityScores.benign) < 0.9 ? 'Consider breast ultrasound or MRI if clinically indicated' : 'Standard mammographic screening sufficient at this time'}
-- **Clinical Follow-up:** Routine clinical breast examination and patient education regarding breast self-awareness
-- **Next Study:** Recommend follow-up mammography in 12 months unless clinical changes warrant earlier evaluation
+**Screening Protocol:** Annual bilateral mammography recommended per current guidelines
+**Supplemental Imaging:** ${parseFloat(probabilityScores.benign) < 0.9 ? 'Consider breast ultrasound or MRI if clinically indicated' : 'Standard mammographic screening sufficient at this time'}
+**Clinical Follow-up:** Routine clinical breast examination and patient education regarding breast self-awareness
+**Next Study:** Recommend follow-up mammography in 12 months unless clinical changes warrant earlier evaluation
 
 ## Technical Quality Assessment
-- **Image Quality:** ${Math.random() > 0.2 ? 'Adequate for diagnostic interpretation' : 'Good technical quality with optimal positioning'}
-- **Positioning:** ${Math.random() > 0.15 ? 'Appropriate' : 'Adequate with minor positioning considerations'}
-- **Compression:** Adequate breast compression achieved
-- **Artifacts:** ${Math.random() > 0.8 ? 'Minimal motion artifact noted' : 'No significant artifacts identified'}
+**Image Quality:** ${Math.random() > 0.2 ? 'Adequate for diagnostic interpretation' : 'Good technical quality with optimal positioning'}
+**Positioning:** ${Math.random() > 0.15 ? 'Appropriate' : 'Adequate with minor positioning considerations'}
+**Compression:** Adequate breast compression achieved
+**Artifacts:** ${Math.random() > 0.8 ? 'Minimal motion artifact noted' : 'No significant artifacts identified'}
 
 ## Limitations
-- **Factors Limiting Interpretation:** This report relies on AI-assisted analysis and should be correlated with clinical findings and radiologist interpretation.
-- **Inherent Model Limitations:** The DCNN's performance may be affected by image quality, positioning, and individual patient factors that require clinical correlation.
-- **Clinical Context Required:** Automated classification should always be interpreted within the context of patient history, physical examination, and clinical risk factors.
+**Factors Limiting Interpretation:** This report relies on AI-assisted analysis and should be correlated with clinical findings and radiologist interpretation.
+**Inherent Model Limitations:** The DCNN's performance may be affected by image quality, positioning, and individual patient factors that require clinical correlation.
+**Clinical Context Required:** Automated classification should always be interpreted within the context of patient history, physical examination, and clinical risk factors.
 
 ## Quality Assurance
-- **Algorithm Version:** DCNN v2.1.3
-- **Processing Time:** ${Math.floor(Math.random() * 45) + 15} seconds
-- **Confidence Metrics:** All quality parameters within acceptable ranges
-- **Validation Status:** Model performance validated on diverse dataset representative of screening population
+**Algorithm Version:** DCNN v2.1.3
+**Processing Time:** ${Math.floor(Math.random() * 45) + 15} seconds
+**Confidence Metrics:** All quality parameters within acceptable ranges
+**Validation Status:** Model performance validated on diverse dataset representative of screening population
 
 ## References
 1. D'Orsi CJ, et al. (2013). ACR BI-RADS Atlas, Breast Imaging Reporting and Data System. Reston, VA: American College of Radiology.
