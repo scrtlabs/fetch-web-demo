@@ -1,5 +1,5 @@
 #!/bin/bash
-# build.sh - Build and run Fetch Medical Diagnostics Demo
+# build.sh - Build and run Fetch AI Medical Diagnostics Demo
 
 set -e
 
