@@ -147,7 +147,6 @@ class MockAPI {
             this.generateFollowUpReport
         ];
 
-        // const template = reportTemplates[Math.floor(Math.random() * reportTemplates.length)];
         const template = this.generateDiagnosticReport;
         return template.call(this, request);
     }
