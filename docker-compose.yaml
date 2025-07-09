@@ -6,9 +6,6 @@ services:
     container_name: fetch-medical
     ports:
       - "8080:80"
-    volumes:
-      # Mount logs for debugging (optional)
-      - ./logs:/var/log/nginx
     environment:
       - NGINX_HOST=localhost
       - NGINX_PORT=80
@@ -19,28 +16,79 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.medical-app.rule=Host(`medical-diagnostics.local`)"
+    #   - "traefik.http.services.medical-app.loadbalancer.server.port=80"
+    networks:
+      - traefik
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.medical-app.rule=Host(`medical-diagnostics.local`)"
-      - "traefik.http.services.medical-app.loadbalancer.server.port=80"
+      traefik.enable: "true"
+      traefik.http.routers.client.rule: Host(`$DOMAIN_NAME`)
+      traefik.http.routers.client.entrypoints: websecure
+      traefik.http.routers.client.tls: "true"
+      traefik.http.services.client.loadbalancer.server.port: "80"
+  traefik:
+    image: traefik:v2.10
+    command:
+      - --api.insecure=false
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls.options=default@file
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /mnt/secure/cert:/certs:ro
+    networks:
+      - traefik
+    configs:
+      - source: tls_config
+        target: /etc/traefik/dynamic/tls.yml
+networks:
+  traefik:
+    driver: bridge
+configs:
+  tls_config:
+    content: |-
+      tls:
+        certificates:
+          - certFile: /certs/secret_vm_fullchain.pem
+            keyFile: /certs/secret_vm_private.pem
+        stores:
+          default:
+            defaultCertificate:
+              certFile: /certs/secret_vm_fullchain.pem
+              keyFile: /certs/secret_vm_private.pem
+
+
+
+
+
+
 
   # Optional: Add a reverse proxy for SSL/domain routing
   # Uncomment if you want to use Traefik for routing
-  # traefik:
-  #   image: traefik:v2.10
-  #   container_name: traefik
-  #   command:
-  #     - "--api.insecure=true"
-  #     - "--providers.docker=true"
-  #     - "--providers.docker.exposedbydefault=false"
-  #     - "--entrypoints.web.address=:80"
-  #   ports:
-  #     - "80:80"
-  #     - "8081:8080"  # Traefik dashboard
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock:ro
-  #   restart: unless-stopped
+#   traefik:
+#     image: traefik:v2.10
+#     container_name: traefik
+#     command:
+#       - "--api.insecure=true"
+#       - "--providers.docker=true"
+#       - "--providers.docker.exposedbydefault=false"
+#       - "--entrypoints.web.address=:80"
+#     ports:
+#       - "80:80"
+#       - "8081:8080"  # Traefik dashboard
+#     volumes:
+#       - /var/run/docker.sock:/var/run/docker.sock:ro
+#     restart: unless-stopped
 
-networks:
-  default:
-    name: medical-diagnostics-network
+# networks:
+#   default:
+#     name: medical-diagnostics-network

@@ -6,9 +6,12 @@ on:
       - master
     paths:
       - 'Dockerfile'
+      - 'docker-compose.yaml'
       - '*.sh'
       - '*.html'
       - 'js/*.js'
+      - 'css/*.css'
+      - 'assets/*'
       - '.github/workflows/docker-publish.yml'
 
 jobs:
