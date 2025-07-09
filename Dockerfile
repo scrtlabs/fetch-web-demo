@@ -23,6 +23,8 @@ COPY css/ ./css/
 # Copy JavaScript files
 COPY js/ ./js/
 
+COPY assets/ ./assets/
+
 # Copy custom nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf
 
