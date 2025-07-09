@@ -6,6 +6,9 @@ on:
       - master
     paths:
       - 'Dockerfile'
+      - '*.sh'
+      - '*.html'
+      - 'js/*.js'
       - '.github/workflows/docker-publish.yml'
 
 jobs:
