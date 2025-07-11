@@ -972,6 +972,281 @@ class OfflineStorage {
     }
 }
 
+/**
+ * Enhanced Request Storage Manager
+ * Extended version of RequestStorage with additional features for API integration
+ */
+class EnhancedRequestStorage extends RequestStorage {
+    constructor() {
+        super();
+        this.apiConfigKey = 'api_config';
+        this.cacheKey = 'api_cache';
+        this.syncQueueKey = 'sync_queue';
+    }
+
+    /**
+     * Save API configuration and settings
+     */
+    saveAPIConfig(config) {
+        return this.setItem(this.apiConfigKey, {
+            ...config,
+            lastUpdated: new Date().toISOString()
+        }, {
+            version: 1
+        });
+    }
+
+    /**
+     * Load API configuration
+     */
+    loadAPIConfig() {
+        return this.getItem(this.apiConfigKey, {
+            useRealAPI: null,
+            lastAPITest: null,
+            sslErrorDetected: false,
+            fallbackMode: false,
+            lastSuccessfulConnection: null
+        });
+    }
+
+    /**
+     * Cache API responses
+     */
+    cacheAPIResponse(requestId, response, ttl = 3600000) { // 1 hour default
+        const cacheData = this.getItem(this.cacheKey, {});
+        cacheData[requestId] = {
+            response,
+            timestamp: Date.now(),
+            expires: Date.now() + ttl
+        };
+        return this.setItem(this.cacheKey, cacheData);
+    }
+
+    /**
+     * Get cached API response
+     */
+    getCachedAPIResponse(requestId) {
+        const cacheData = this.getItem(this.cacheKey, {});
+        const cached = cacheData[requestId];
+
+        if (!cached) return null;
+
+        // Check if expired
+        if (Date.now() > cached.expires) {
+            delete cacheData[requestId];
+            this.setItem(this.cacheKey, cacheData);
+            return null;
+        }
+
+        return cached.response;
+    }
+
+    /**
+     * Clear expired cache entries
+     */
+    clearExpiredCache() {
+        const cacheData = this.getItem(this.cacheKey, {});
+        const now = Date.now();
+        let cleaned = 0;
+
+        Object.keys(cacheData).forEach(key => {
+            if (cacheData[key].expires < now) {
+                delete cacheData[key];
+                cleaned++;
+            }
+        });
+
+        if (cleaned > 0) {
+            this.setItem(this.cacheKey, cacheData);
+        }
+
+        return cleaned;
+    }
+
+    /**
+     * Add request to sync queue for offline processing
+     */
+    addToSyncQueue(request) {
+        const queue = this.getSyncQueue();
+        queue.push({
+            ...request,
+            queuedAt: Date.now(),
+            attempts: 0,
+            maxAttempts: 3
+        });
+        return this.setItem(this.syncQueueKey, queue);
+    }
+
+    /**
+     * Get sync queue
+     */
+    getSyncQueue() {
+        return this.getItem(this.syncQueueKey, []);
+    }
+
+    /**
+     * Remove item from sync queue
+     */
+    removeFromSyncQueue(requestId) {
+        const queue = this.getSyncQueue();
+        const filtered = queue.filter(item => item.id !== requestId);
+        return this.setItem(this.syncQueueKey, filtered);
+    }
+
+    /**
+     * Update sync queue item
+     */
+    updateSyncQueueItem(requestId, updates) {
+        const queue = this.getSyncQueue();
+        const item = queue.find(item => item.id === requestId);
+
+        if (item) {
+            Object.assign(item, updates);
+            return this.setItem(this.syncQueueKey, queue);
+        }
+
+        return false;
+    }
+
+    /**
+     * Get failed sync items (exceeded max attempts)
+     */
+    getFailedSyncItems() {
+        const queue = this.getSyncQueue();
+        return queue.filter(item => item.attempts >= item.maxAttempts);
+    }
+
+    /**
+     * Save enhanced request with additional metadata
+     */
+    saveEnhancedRequest(request, metadata = {}) {
+        const enhancedRequest = {
+            ...request,
+            metadata: {
+                ...metadata,
+                savedAt: Date.now(),
+                source: metadata.source || 'unknown',
+                processingMethod: metadata.processingMethod || 'hybrid',
+                retryCount: metadata.retryCount || 0
+            }
+        };
+
+        return this.saveRequest(enhancedRequest);
+    }
+
+    /**
+     * Get requests by processing method
+     */
+    getRequestsByMethod(method) {
+        const requests = this.loadRequests();
+        return requests.filter(req =>
+            req.metadata && req.metadata.processingMethod === method
+        );
+    }
+
+    /**
+     * Get API usage statistics
+     */
+    getAPIUsageStats() {
+        const requests = this.loadRequests();
+        const config = this.loadAPIConfig();
+        const queue = this.getSyncQueue();
+
+        const stats = {
+            totalRequests: requests.length,
+            realAPIRequests: requests.filter(r =>
+                r.metadata && r.metadata.processingMethod === 'real'
+            ).length,
+            mockAPIRequests: requests.filter(r =>
+                r.metadata && r.metadata.processingMethod === 'mock'
+            ).length,
+            hybridAPIRequests: requests.filter(r =>
+                r.metadata && r.metadata.processingMethod === 'hybrid'
+            ).length,
+            queuedRequests: queue.length,
+            failedSyncRequests: this.getFailedSyncItems().length,
+            lastAPITest: config.lastAPITest,
+            sslErrorDetected: config.sslErrorDetected,
+            fallbackMode: config.fallbackMode
+        };
+
+        return stats;
+    }
+
+    /**
+     * Export enhanced data including API config and cache
+     */
+    exportEnhancedData() {
+        const baseData = this.exportData();
+        return {
+            ...baseData,
+            apiConfig: this.loadAPIConfig(),
+            apiCache: this.getItem(this.cacheKey, {}),
+            syncQueue: this.getSyncQueue(),
+            enhanced: true
+        };
+    }
+
+    /**
+     * Import enhanced data
+     */
+    importEnhancedData(data, options = {}) {
+        const results = this.importData(data, options);
+
+        // Import additional enhanced data
+        if (data.apiConfig) {
+            this.saveAPIConfig(data.apiConfig);
+        }
+
+        if (data.apiCache) {
+            this.setItem(this.cacheKey, data.apiCache);
+        }
+
+        if (data.syncQueue) {
+            this.setItem(this.syncQueueKey, data.syncQueue);
+        }
+
+        return results;
+    }
+
+    /**
+     * Clean up old cache and sync queue items
+     */
+    performMaintenance() {
+        const results = {
+            expiredCacheCleared: this.clearExpiredCache(),
+            oldRequestsCleanup: this.cleanupOldRequests(),
+            failedSyncItems: this.getFailedSyncItems().length
+        };
+
+        // Clean up very old sync queue items (older than 7 days)
+        const queue = this.getSyncQueue();
+        const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+        const cleanQueue = queue.filter(item => item.queuedAt > sevenDaysAgo);
+
+        if (cleanQueue.length !== queue.length) {
+            this.setItem(this.syncQueueKey, cleanQueue);
+            results.oldSyncItemsCleared = queue.length - cleanQueue.length;
+        }
+
+        return results;
+    }
+
+    /**
+     * Reset API configuration and cache
+     */
+    resetAPIData() {
+        this.removeItem(this.apiConfigKey);
+        this.removeItem(this.cacheKey);
+        this.removeItem(this.syncQueueKey);
+        return true;
+    }
+}
+
+// Export for global use
+window.EnhancedRequestStorage = EnhancedRequestStorage;
+
+
 // Create global instances
 const storage = new RequestStorage();
 const cache = new CacheManager();

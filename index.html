@@ -58,13 +58,22 @@
 
                     <!-- Navigation Actions -->
                     <div class="nav-actions">
+                        <!-- API Status Indicator -->
+                        <div class="api-status" id="api-status"
+                            style="display: flex; align-items: center; gap: 0.5rem; margin-right: 1rem;">
+                            <span class="api-status-dot" id="api-status-dot"
+                                style="width: 8px; height: 8px; border-radius: 50%; background: #ffc107;"></span>
+                            <span class="api-status-text" id="api-status-text"
+                                style="font-size: 0.875rem; color: var(--dark-gray);">Checking API...</span>
+                        </div>
+                    
                         <button class="btn btn-secondary" id="settings-btn" title="Settings">
                             ⚙️ Settings
                         </button>
                         <button class="btn btn-primary btn-diagnose" id="diagnose-btn">
                             📋 New Diagnosis
-                        </button>
-                    </div>
+                        </button>             
+                     </div>
                 </div>
             </div>
         </header>
@@ -178,9 +187,8 @@
                     </div>
                 </section>
 
-                <!-- Help Section -->
-                <section class="help-section glass-card"
-                    style="margin-top: var(--spacing-xxl); padding: var(--spacing-xl);">
+                <!-- Help Section -->                
+                <section class="help-section glass-card" style="margin-top: var(--spacing-xxl); padding: var(--spacing-xl);">
                     <h3>Getting Started</h3>
                     <div class="help-grid"
                         style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--spacing-lg); margin-top: var(--spacing-lg);">
@@ -192,23 +200,55 @@
                         <div class="help-item">
                             <div class="help-icon">🔑</div>
                             <h4>2. API Configuration</h4>
-                            <p>Provide your API key for authentication. Demo key is pre-filled for testing purposes.</p>
+                            <p>The system automatically connects to the AI analysis service. No additional configuration needed.</p>
                         </div>
                         <div class="help-item">
                             <div class="help-icon">🤖</div>
                             <h4>3. AI Analysis</h4>
-                            <p>Our AI system analyzes breast density and provides detailed diagnostic reports.</p>
+                            <p>Real AI analysis when available, or high-quality demo data when the service is unavailable.</p>
                         </div>
                         <div class="help-item">
                             <div class="help-icon">📊</div>
                             <h4>4. View Results</h4>
-                            <p>Access comprehensive reports with BI-RADS classification and clinical recommendations.
-                            </p>
+                            <p>Access PDF reports from real AI analysis or detailed markdown reports in demo mode.</p>
+                        </div>
+                    </div>
+                
+                    <!-- API Status Information -->
+                    <div style="margin-top: 2rem; padding: 1rem; background: var(--secondary-blue); border-radius: 8px;">
+                        <h4 style="margin-bottom: 1rem;">🔗 Analysis Service Status</h4>
+                        <div id="api-help-status">
+                            <p>Checking connection to AI analysis service...</p>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Debug Panel (Development Only) -->
+                <section class="debug-panel" id="debug-panel" style="display: none; margin-top: 2rem;">
+                    <div class="glass-card" style="padding: 1rem;">
+                        <h3>API Debug Panel</h3>
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0;">
+                            <button class="btn btn-secondary" onclick="window.testAPIConnection()">
+                                🔍 Test API Connection
+                            </button>
+                            <button class="btn btn-secondary" onclick="window.refreshAPIStatus()">
+                                🔄 Refresh API Status
+                            </button>
+                            <button class="btn btn-secondary" onclick="window.forceDemoMode()">
+                                🎭 Force Demo Mode
+                            </button>
+                            <button class="btn btn-secondary" onclick="toggleDebugPanel()">
+                                ❌ Hide Debug Panel
+                            </button>
+                        </div>
+                        <div id="debug-info"
+                            style="background: #f8f9fa; padding: 1rem; border-radius: 4px; font-family: monospace; font-size: 0.875rem;">
+                            Debug information will appear here...
                         </div>
                     </div>
                 </section>
             </div>
-        </main>
+         </main>
 
         <!-- Footer -->
         <footer class="footer"
@@ -410,6 +450,128 @@
         `;
         document.head.appendChild(style);
     </script>
+
+
+    <!-- 1. Add the new JavaScript files before the closing </body> tag -->
+    <!-- Add these lines after your existing script tags and before the initialization script -->
+
+    <script src="js/fetch-api.js"></script>
+    <script src="js/fetch-api-integration.js"></script>
+
+
+    <!-- 3. Add API status update script -->
+    <script>
+        // Update API status indicator
+        function updateAPIStatus(isAvailable, message) {
+            const dot = document.getElementById('api-status-dot');
+            const text = document.getElementById('api-status-text');
+
+            if (dot && text) {
+                if (isAvailable) {
+                    dot.style.background = '#28a745';
+                    text.textContent = 'Real AI Available';
+                    text.style.color = '#28a745';
+                } else {
+                    dot.style.background = '#ffc107';
+                    text.textContent = 'Demo Mode';
+                    text.style.color = '#ffc107';
+                }
+
+                if (message) {
+                    text.title = message;
+                }
+            }
+        }
+
+        // Listen for API status changes
+        document.addEventListener('DOMContentLoaded', function () {
+            // Initial status check
+            setTimeout(async () => {
+                if (window.hybridAPI) {
+                    try {
+                        const useRealAPI = await window.hybridAPI.initializeAPIMode();
+                        updateAPIStatus(useRealAPI, useRealAPI ? 'Connected to real AI analysis service' : 'Real API unavailable, using demo data');
+                    } catch (error) {
+                        updateAPIStatus(false, 'Error checking API status');
+                    }
+                }
+            }, 2000);
+        });
+    </script>
+
+    <script>
+        // Debug panel functions
+        function toggleDebugPanel() {
+            const panel = document.getElementById('debug-panel');
+            if (panel) {
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        // Enable debug panel with Ctrl+Shift+D
+        document.addEventListener('keydown', function (e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                toggleDebugPanel();
+                updateDebugInfo();
+            }
+        });
+
+        function updateDebugInfo() {
+            const debugInfo = document.getElementById('debug-info');
+            if (debugInfo && window.hybridAPI) {
+                const info = {
+                    'API Mode': window.hybridAPI.useRealAPI ? 'Real API' : 'Demo Mode',
+                    'Base URL': window.hybridAPI.realAPI ? window.hybridAPI.realAPI.baseUrl : 'N/A',
+                    'Requests Count': window.app ? window.app.requests.length : 'N/A',
+                    'Storage Available': !!window.storage,
+                    'PDF Blobs Stored': window.hybridAPI.storage ? 'Available' : 'N/A',
+                    'Timestamp': new Date().toLocaleString()
+                };
+
+                debugInfo.innerHTML = Object.entries(info)
+                    .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
+                    .join('<br>');
+            }
+        }
+    </script>
+
+
+
+    <script>
+        // Update help section API status
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(async () => {
+                const statusDiv = document.getElementById('api-help-status');
+                if (statusDiv && window.hybridAPI) {
+                    try {
+                        const useRealAPI = window.hybridAPI.useRealAPI;
+                        if (useRealAPI === true) {
+                            statusDiv.innerHTML = `
+                            <p style="color: #28a745; font-weight: 500;">✅ Real AI Analysis Service Connected</p>
+                            <p style="font-size: 0.875rem;">Your requests will be processed by our advanced AI system and return detailed PDF reports.</p>
+                        `;
+                        } else if (useRealAPI === false) {
+                            statusDiv.innerHTML = `
+                            <p style="color: #ffc107; font-weight: 500;">🎭 Demo Mode Active</p>
+                            <p style="font-size: 0.875rem;">The AI analysis service is unavailable. Using high-quality demonstration data for testing the interface.</p>
+                        `;
+                        } else {
+                            statusDiv.innerHTML = `
+                            <p style="color: #6c757d;">🔍 Status: Checking...</p>
+                        `;
+                        }
+                    } catch (error) {
+                        statusDiv.innerHTML = `
+                        <p style="color: #dc3545;">❌ Error checking service status</p>
+                    `;
+                    }
+                }
+            }, 3000);
+        });
+    </script>
+
+
+
 </body>
 
 </html>

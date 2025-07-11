@@ -296,43 +296,262 @@ class MedicalApp {
         this.modals.forEach(modal => modal.close());
     }
 
+
+    /**
+     * Create new diagnostic request
+     */
     /**
      * Create new diagnostic request
      */
     createRequest(formData) {
-        const request = {
-            id: this.generateRequestId(),
-            timestamp: new Date().toISOString(),
-            status: 'pending',
-            filename: formData.file.name,
-            fileSize: formData.file.size,
-            fileType: formData.file.type,
-            imageData: null, // Will be set after file processing
-            apiKey: formData.apiKey,
-            note: formData.note,
-            progress: 0,
-            report: null,
-            error: null
-        };
+        console.log('🏗️ MedicalApp.createRequest called with:', {
+            hasFile: !!formData.file,
+            fileName: formData.file?.name,
+            fileSize: formData.file?.size,
+            fileType: formData.file?.type,
+            apiKey: formData.apiKey ? 'Present' : 'Missing',
+            note: formData.note
+        });
 
-        // Process the file
-        this.processFile(request, formData.file);
+        try {
+            // Validate form data
+            if (!formData) {
+                throw new Error('Form data is required');
+            }
 
-        // Add to requests
-        this.requests.unshift(request);
-        this.saveRequestsToStorage();
+            if (!formData.file || !(formData.file instanceof File)) {
+                throw new Error('Valid file is required for analysis');
+            }
 
-        // Update UI
-        this.renderRequests();
-        this.updateFilterTabs();
+            if (!formData.apiKey) {
+                throw new Error('API key is required');
+            }
 
-        // Show success message
-        this.showToast('success', 'Request Created', `Diagnostic request ${request.id} has been submitted.`);
+            const request = {
+                id: this.generateRequestId(),
+                timestamp: new Date().toISOString(),
+                status: 'pending',
+                filename: formData.file.name,
+                fileSize: formData.file.size,
+                fileType: formData.file.type,
+                imageData: null, // Will be set after file processing
+                apiKey: formData.apiKey,
+                note: formData.note || '',
+                progress: 0,
+                report: null,
+                error: null
+            };
 
-        // Start mock processing
-        this.startMockProcessing(request);
+            console.log('📋 Request object created:', request);
 
-        return request;
+            // Process the file for preview
+            this.processFile(request, formData.file);
+
+            // Add to requests array
+            if (!this.requests) {
+                this.requests = [];
+            }
+            this.requests.unshift(request);
+
+            console.log('📊 Total requests now:', this.requests.length);
+
+            // Save to storage
+            this.saveRequestsToStorage();
+
+            // Update UI
+            this.renderRequests();
+            this.updateFilterTabs();
+
+            // Start analysis with the actual file object
+            console.log('🚀 Starting analysis...');
+            this.startAnalysis(request, formData.file);
+
+            return request;
+
+        } catch (error) {
+            console.error('❌ Error in createRequest:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Start analysis for a request
+     */
+    async startAnalysis(request, file) {
+        try {
+            console.log('🔬 MedicalApp.startAnalysis called for request:', request.id);
+            console.log('📁 File for analysis:', {
+                name: file?.name,
+                size: file?.size,
+                type: file?.type,
+                instanceof: file instanceof File
+            });
+
+            // Validate inputs
+            if (!file || !(file instanceof File)) {
+                throw new Error('Invalid file object for analysis');
+            }
+
+            if (!window.hybridAPI) {
+                throw new Error('Hybrid API not available');
+            }
+
+            request.status = 'processing';
+            request.progress = 10;
+            this.updateRequestCard(request);
+            this.saveRequestsToStorage();
+
+            console.log('📤 Calling hybridAPI.analyzeBreastDensity...');
+
+            // Use hybrid API for analysis
+            const result = await window.hybridAPI.analyzeBreastDensity(file, request.id, request.note);
+
+            console.log('📥 Analysis result received:', result);
+
+            if (result && result.success) {
+                request.status = 'completed';
+                request.progress = 100;
+
+                if (result.type === 'pdf') {
+                    request.pdfAvailable = true;
+                    request.report = 'PDF report generated successfully';
+                    request.metadata = result.metadata;
+                } else if (result.type === 'mock') {
+                    request.report = result.report;
+                    request.metadata = result.metadata;
+                } else {
+                    request.report = result.report || 'Analysis completed';
+                }
+
+                this.showToast('success', 'Analysis Complete',
+                    `Analysis for ${request.filename} completed successfully.`);
+
+            } else {
+                request.status = 'failed';
+                request.error = result?.error || 'Analysis failed for unknown reason';
+                this.showToast('error', 'Analysis Failed',
+                    `Analysis for ${request.filename} failed: ${request.error}`);
+            }
+
+        } catch (error) {
+            console.error('❌ Analysis error in startAnalysis:', error);
+            request.status = 'failed';
+            request.error = error.message;
+            this.showToast('error', 'Analysis Error',
+                `Analysis failed: ${error.message}`);
+        } finally {
+            // Always update UI and save state
+            this.saveRequestsToStorage();
+            this.renderRequests();
+            this.updateFilterTabs();
+        }
+    }
+
+    /**
+     * Process uploaded file for preview
+     */
+    async processFile(request, file) {
+        try {
+            console.log('🖼️ Processing file for preview:', file.name);
+
+            // Create file preview for images
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    request.imageData = e.target.result;
+                    this.saveRequestsToStorage();
+                    this.renderRequests();
+                    console.log('✅ File preview generated');
+                };
+                reader.onerror = (error) => {
+                    console.error('❌ Error reading file for preview:', error);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                console.log('ℹ️ Non-image file, no preview generated');
+            }
+        } catch (error) {
+            console.error('❌ Error processing file:', error);
+            request.error = 'Failed to process uploaded file: ' + error.message;
+        }
+    }
+
+    /**
+     * Update specific request card in UI
+     */
+    updateRequestCard(request) {
+        try {
+            const card = document.querySelector(`[data-request-id="${request.id}"]`);
+            if (card) {
+                const progressBar = card.querySelector('.progress-fill');
+                const statusBadge = card.querySelector('.status-badge');
+
+                if (progressBar) {
+                    progressBar.style.width = `${request.progress || 0}%`;
+                }
+
+                if (statusBadge) {
+                    statusBadge.className = `status-badge ${request.status}`;
+                    statusBadge.innerHTML = `
+                    <span class="status-icon ${request.status}"></span>
+                    ${request.status}
+                `;
+                }
+
+                console.log('🔄 Updated request card for:', request.id);
+            } else {
+                console.log('ℹ️ Request card not found for:', request.id);
+            }
+
+            this.saveRequestsToStorage();
+        } catch (error) {
+            console.error('❌ Error updating request card:', error);
+        }
+    }
+
+    /**
+     * Add method to download PDF for real API results
+     */
+    // Add this to MedicalApp class in js/app.js
+
+    async downloadPDFReport(requestId) {
+        try {
+            const request = this.requests.find(r => r.id === requestId);
+            if (!request) {
+                throw new Error('Request not found');
+            }
+
+            if (!request.hasRealPDF) {
+                this.showToast('warning', 'No PDF Available',
+                    'This request does not have a real PDF report available.');
+                return;
+            }
+
+            // Get PDF blob from storage
+            const pdfBlob = await window.hybridAPI.getPDFBlob(requestId);
+
+            if (!pdfBlob) {
+                throw new Error('PDF file not found in storage');
+            }
+
+            // Create download link
+            const url = URL.createObjectURL(pdfBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `breast_density_report_${requestId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            this.showToast('success', 'Download Started',
+                'PDF report download has started.');
+
+        } catch (error) {
+            console.error('❌ PDF download failed:', error);
+            this.showToast('error', 'Download Failed',
+                `Failed to download PDF: ${error.message}`);
+        }
     }
 
     /**
@@ -670,3 +889,10 @@ const app = new MedicalApp();
 
 // Make app globally available
 window.app = app;
+
+console.log('🔧 App.js methods check:', {
+    hasCreateRequest: typeof MedicalApp.prototype.createRequest === 'function',
+    hasStartAnalysis: typeof MedicalApp.prototype.startAnalysis === 'function',
+    hasProcessFile: typeof MedicalApp.prototype.processFile === 'function',
+    hasUpdateRequestCard: typeof MedicalApp.prototype.updateRequestCard === 'function'
+});

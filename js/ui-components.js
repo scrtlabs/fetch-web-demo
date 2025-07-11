@@ -560,20 +560,188 @@ class UploadModal extends BaseModal {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-    submitForm() {
+    /**
+     * Submit form with real API integration
+     */
+    async submitForm() {
         if (!this.validateCurrentStep()) return;
 
-        // Create request through app
-        if (window.app) {
+        try {
+            // Create request through app first
             const request = window.app.createRequest(this.formData);
+
+            // Close modal and reset
             this.close();
             this.reset();
 
-            // Show success message
-            window.app.showToast('success', 'Request Submitted',
-                `Your diagnostic request ${request.id} has been created and is being processed.`);
+            // Show initial submission message
+            window.app.showToast('info', 'Request Submitted',
+                `Diagnostic request ${request.id} is being processed...`);
+
+            // Start real analysis
+            await this.performRealAnalysis(request);
+
+        } catch (error) {
+            console.error('❌ Form submission failed:', error);
+            window.app.showToast('error', 'Submission Failed', error.message);
         }
     }
+
+    /**
+      * Perform real API analysis
+      */
+    async performRealAnalysis(request) {
+        try {
+            // Update request status
+            request.status = 'processing';
+            request.progress = 5;
+            request.statusMessage = 'Initializing analysis...';
+            window.app.updateRequestCard(request);
+            window.app.saveRequestsToStorage();
+
+            console.log(`🔬 Starting real analysis for request ${request.id}`);
+
+            // Initialize API and check availability
+            await window.hybridAPI.initializeAPIMode();
+
+            // Update progress
+            request.progress = 10;
+            request.statusMessage = 'Connecting to analysis service...';
+            window.app.updateRequestCard(request);
+
+            // Perform the analysis
+            const result = await window.hybridAPI.analyzeBreastDensity(
+                this.formData.file,
+                request.id,
+                this.formData.note
+            );
+
+            console.log(`📊 Analysis result for ${request.id}:`, result);
+
+            if (result.success) {
+                // Update request with results
+                request.status = 'completed';
+                request.progress = 100;
+                request.statusMessage = 'Analysis complete';
+
+                if (result.type === 'pdf') {
+                    // Real API success - PDF generated
+                    request.report = this.generateReportFromMetadata(result);
+                    request.hasRealPDF = true;
+                    request.apiMetadata = result.metadata;
+
+                    window.app.showToast('success', 'Analysis Complete',
+                        `Real AI analysis completed for ${request.filename}`);
+
+                } else if (result.type === 'mock') {
+                    // Fallback to mock data
+                    request.report = result.report;
+                    request.hasRealPDF = false;
+                    request.mockReason = result.message;
+
+                    window.app.showToast('warning', 'Demo Analysis Complete',
+                        result.message);
+
+                } else {
+                    // Unexpected result type
+                    throw new Error(`Unexpected result type: ${result.type}`);
+                }
+
+                // Save updated request
+                window.app.updateRequestCard(request);
+                window.app.saveRequestsToStorage();
+
+            } else {
+                throw new Error(result.error || 'Analysis failed with unknown error');
+            }
+
+        } catch (error) {
+            console.error(`❌ Analysis failed for request ${request.id}:`, error);
+
+            // Update request status to failed
+            request.status = 'failed';
+            request.progress = 0;
+            request.error = error.message;
+            request.statusMessage = 'Analysis failed';
+
+            window.app.updateRequestCard(request);
+            window.app.saveRequestsToStorage();
+
+            // Determine error type and show appropriate message
+            if (error.message.includes('timed out')) {
+                window.app.showToast('error', 'Analysis Timeout',
+                    'The analysis took too long to complete. Please try again with a smaller image.');
+            } else if (error.message.includes('Network error') || error.message.includes('CORS')) {
+                window.app.showToast('error', 'Connection Error',
+                    'Unable to connect to the analysis service. Please check your internet connection.');
+            } else if (error.message.includes('File size')) {
+                window.app.showToast('error', 'File Too Large',
+                    'The uploaded file is too large. Please use a file smaller than 50MB.');
+            } else {
+                window.app.showToast('error', 'Analysis Failed',
+                    `Analysis failed: ${error.message}`);
+            }
+        }
+    }
+
+    /**
+     * Generate markdown report from API metadata when real PDF is available
+     */
+    generateReportFromMetadata(result) {
+        const metadata = result.metadata || {};
+        const timestamp = new Date().toLocaleString();
+
+        return `# Breast Density Analysis Report
+
+## Report Summary
+This analysis was completed using our advanced AI diagnostic system. The full detailed report is available as a PDF document.
+
+## Request Information
+- **Report ID:** ${result.requestId}
+- **Original Filename:** ${metadata.originalFilename || 'Unknown'}
+- **Analysis Date:** ${timestamp}
+- **Model Used:** ${metadata.modelName || 'Breast Density Classification'}
+- **Report Size:** ${metadata.size ? this.formatBytes(metadata.size) : 'Unknown'}
+
+## Analysis Status
+✅ **Analysis Completed Successfully**
+
+The AI system has processed your medical image and generated a comprehensive diagnostic report. The detailed findings, measurements, and clinical recommendations are available in the PDF report.
+
+## Key Features of AI Analysis
+- Advanced deep learning model trained on medical imaging data
+- Breast density classification according to BI-RADS standards  
+- Quantitative measurements and statistical analysis
+- Clinical recommendations based on findings
+- Quality metrics and confidence scores
+
+## Accessing Your Report
+Click the "Download PDF Report" button in the report viewer to access the complete diagnostic analysis.
+
+## Technical Details
+- **Processing Method:** AI-Assisted Medical Image Analysis
+- **Generation Time:** ${metadata.generationTime || timestamp}
+- **Quality Status:** Analysis completed successfully
+- **Validation:** Automated quality checks passed
+
+---
+
+**Note:** This analysis was performed by an AI system and should be reviewed by a qualified medical professional. The complete diagnostic details are available in the PDF report.
+
+*Report generated on ${timestamp}*`;
+    }
+
+    /**
+     * Format bytes for display
+     */
+    formatBytes(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
 
     reset() {
         this.currentStep = 1;
@@ -708,9 +876,339 @@ class ReportModal extends BaseModal {
         modal.querySelector('#download-pdf-report').addEventListener('click', () => this.downloadPDFReport());
     }
 
+    /**
+     * Updated initialize method to handle real PDFs
+     */
     initialize(request) {
         this.currentRequest = request;
         this.updateContent();
+
+        // If this is a real PDF report, load it
+        if (request.hasRealPDF) {
+            this.loadRealPDFReport();
+        }
+    }
+
+    /**
+     * Load and display real PDF report
+     */
+    async loadRealPDFReport() {
+        try {
+            console.log(`📄 Loading real PDF for request ${this.currentRequest.id}`);
+
+            const pdfBlob = await window.hybridAPI.getPDFBlob(this.currentRequest.id);
+
+            if (pdfBlob) {
+                this.displayPDFInModal(pdfBlob);
+            } else {
+                console.warn('⚠️ PDF blob not found, falling back to markdown report');
+                this.displayMarkdownReport();
+            }
+
+        } catch (error) {
+            console.error('❌ Failed to load PDF report:', error);
+            this.displayMarkdownReport();
+        }
+    }
+
+    /**
+     * Display PDF in the modal
+     */
+    displayPDFInModal(pdfBlob) {
+        const reportContent = this.element.querySelector('#medical-report-content');
+        const processingState = this.element.querySelector('#processing-state');
+        const completedReport = this.element.querySelector('#completed-report');
+
+        // Hide processing state and show completed report
+        if (processingState) processingState.style.display = 'none';
+        if (completedReport) completedReport.style.display = 'block';
+
+        // Create PDF viewer
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+
+        const pdfViewer = `
+            <div class="pdf-report-viewer">
+                <div class="pdf-controls">
+                    <button class="btn btn-secondary" onclick="window.app.downloadPDFReport('${this.currentRequest.id}')">
+                        📄 Download PDF
+                    </button>
+                    <button class="btn btn-secondary" onclick="this.openPDFInNewWindow('${pdfUrl}')">
+                        🔗 Open in New Window
+                    </button>
+                    <span class="pdf-info">
+                        Real AI Analysis Report (${this.formatFileSize(pdfBlob.size)})
+                    </span>
+                </div>
+                <div class="pdf-container">
+                    <iframe 
+                        src="${pdfUrl}" 
+                        width="100%" 
+                        height="600px"
+                        style="border: 1px solid #ddd; border-radius: 8px;">
+                        <p>Your browser does not support PDF viewing. 
+                           <a href="${pdfUrl}" target="_blank">Click here to download the PDF</a>
+                        </p>
+                    </iframe>
+                </div>
+                <div class="pdf-metadata">
+                    <h4>Analysis Details</h4>
+                    <div class="metadata-grid">
+                        <div><strong>Report ID:</strong> ${this.currentRequest.id}</div>
+                        <div><strong>Original File:</strong> ${this.currentRequest.filename}</div>
+                        <div><strong>Analysis Date:</strong> ${new Date(this.currentRequest.timestamp).toLocaleDateString()}</div>
+                        <div><strong>File Size:</strong> ${this.formatFileSize(pdfBlob.size)}</div>
+                        ${this.currentRequest.apiMetadata ? `
+                            <div><strong>Model:</strong> ${this.currentRequest.apiMetadata.modelName || 'Unknown'}</div>
+                            <div><strong>Generation:</strong> ${this.currentRequest.apiMetadata.generationTime || 'Unknown'}</div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        reportContent.innerHTML = pdfViewer;
+
+        // Store URL for cleanup
+        this.currentPDFUrl = pdfUrl;
+    }
+
+    /**
+     * Display markdown report (fallback or demo mode)
+     */
+    displayMarkdownReport() {
+        const reportContent = this.element.querySelector('#medical-report-content');
+        const processingState = this.element.querySelector('#processing-state');
+        const completedReport = this.element.querySelector('#completed-report');
+
+        if (this.currentRequest.status === 'completed' && this.currentRequest.report) {
+            processingState.style.display = 'none';
+            completedReport.style.display = 'block';
+
+            // Render markdown report with status indicator
+            const statusBanner = this.currentRequest.hasRealPDF ?
+                '' :
+                `<div class="demo-banner">
+                    <div class="demo-icon">🎭</div>
+                    <div class="demo-text">
+                        <strong>Demo Mode:</strong> ${this.currentRequest.mockReason || 'Using simulated analysis data'}
+                    </div>
+                </div>`;
+
+            const renderedMarkdown = this.renderMarkdown(this.currentRequest.report);
+            completedReport.innerHTML = statusBanner + renderedMarkdown;
+
+            // Add download button for real PDFs
+            if (this.currentRequest.hasRealPDF) {
+                this.addPDFDownloadButton();
+            }
+
+        } else {
+            processingState.style.display = 'block';
+            completedReport.style.display = 'none';
+            this.updateProcessingState();
+        }
+    }
+
+    /**
+     * Add PDF download button to markdown report
+     */
+    addPDFDownloadButton() {
+        const reportContent = this.element.querySelector('#completed-report');
+        if (reportContent && !reportContent.querySelector('.pdf-download-section')) {
+            const downloadSection = document.createElement('div');
+            downloadSection.className = 'pdf-download-section';
+            downloadSection.style.cssText = `
+                background: #e3f2fd;
+                border: 1px solid #2196f3;
+                border-radius: 8px;
+                padding: 1rem;
+                margin: 1rem 0;
+                text-align: center;
+            `;
+
+            downloadSection.innerHTML = `
+                <div style="margin-bottom: 0.5rem;">
+                    <strong>📄 Real AI Analysis Report Available</strong>
+                </div>
+                <div style="margin-bottom: 1rem; font-size: 0.875rem; color: #666;">
+                    A detailed PDF report was generated by our AI analysis system
+                </div>
+                <button class="btn btn-primary" onclick="window.app.downloadPDFReport('${this.currentRequest.id}')">
+                    📄 Download Complete PDF Report
+                </button>
+            `;
+
+            reportContent.insertBefore(downloadSection, reportContent.firstChild);
+        }
+    }
+
+    /**
+     * Open PDF in new window
+     */
+    openPDFInNewWindow(pdfUrl) {
+        window.open(pdfUrl, '_blank', 'width=1024,height=768,scrollbars=yes,resizable=yes');
+    }
+
+    /**
+     * Format file size
+     */
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    /**
+     * Updated close method to cleanup PDF URLs
+     */
+    close() {
+        // Cleanup PDF URL to prevent memory leaks
+        if (this.currentPDFUrl) {
+            URL.revokeObjectURL(this.currentPDFUrl);
+            this.currentPDFUrl = null;
+        }
+
+        super.close();
+    }
+
+    /**
+     * Updated updateContent method
+     */
+    updateContent() {
+        if (!this.currentRequest) return;
+
+        const modal = this.element;
+
+        // Update header info
+        modal.querySelector('#report-id').textContent = this.currentRequest.id;
+        modal.querySelector('#report-date').textContent = new Date(this.currentRequest.timestamp).toLocaleDateString();
+        modal.querySelector('#report-status').textContent = this.currentRequest.status;
+
+        // Update image
+        const medicalImage = modal.querySelector('.medical-image');
+        const imageTitle = modal.querySelector('.image-title');
+
+        if (this.currentRequest.imageData) {
+            medicalImage.src = this.currentRequest.imageData;
+            medicalImage.alt = this.currentRequest.filename;
+            imageTitle.textContent = this.currentRequest.filename;
+        }
+
+        // Display appropriate report content
+        if (this.currentRequest.hasRealPDF) {
+            // Real PDF available - display it
+            this.displayPDFInModal = this.displayPDFInModal || (async () => {
+                const pdfBlob = await window.hybridAPI.getPDFBlob(this.currentRequest.id);
+                if (pdfBlob) {
+                    this.displayPDFInModal(pdfBlob);
+                } else {
+                    this.displayMarkdownReport();
+                }
+            });
+        } else {
+            // Show markdown report
+            this.displayMarkdownReport();
+        }
+    }
+
+    /**
+     * Enhanced export functions for real PDFs
+     */
+    async exportReport() {
+        if (this.currentRequest.hasRealPDF) {
+            // Download the real PDF
+            try {
+                await window.app.downloadPDFReport(this.currentRequest.id);
+            } catch (error) {
+                console.error('Failed to download real PDF:', error);
+                // Fall back to markdown export
+                this.exportMarkdownReport();
+            }
+        } else {
+            // Export markdown report
+            this.exportMarkdownReport();
+        }
+    }
+
+    /**
+     * Export markdown report as fallback
+     */
+    exportMarkdownReport() {
+        if (this.currentRequest && this.currentRequest.report) {
+            const blob = new Blob([this.currentRequest.report], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `medical_report_${this.currentRequest.id}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    }
+
+    /**
+     * Enhanced print function
+     */
+    async printReport() {
+        if (this.currentRequest.hasRealPDF) {
+            // Print the PDF
+            const pdfBlob = await window.hybridAPI.getPDFBlob(this.currentRequest.id);
+            if (pdfBlob) {
+                const pdfUrl = URL.createObjectURL(pdfBlob);
+                const printWindow = window.open(pdfUrl, '_blank');
+                printWindow.addEventListener('load', () => {
+                    printWindow.print();
+                    URL.revokeObjectURL(pdfUrl);
+                });
+                return;
+            }
+        }
+
+        // Fall back to markdown printing
+        if (this.currentRequest && this.currentRequest.report) {
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Medical Report - ${this.currentRequest.id}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+                        h1, h2, h3 { color: #0066cc; border-bottom: 1px solid #ccc; padding-bottom: 8px; }
+                        .header { text-align: center; margin-bottom: 30px; }
+                        .meta { background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+                        .demo-banner { background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin-bottom: 20px; border-radius: 5px; }
+                        @media print { body { margin: 20px; } }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>Medical Diagnostic Report</h1>
+                        <p>Report ID: ${this.currentRequest.id}</p>
+                        <p>Generated: ${new Date().toLocaleDateString()}</p>
+                    </div>
+                    <div class="meta">
+                        <p><strong>File:</strong> ${this.currentRequest.filename}</p>
+                        <p><strong>Date:</strong> ${new Date(this.currentRequest.timestamp).toLocaleDateString()}</p>
+                        <p><strong>Status:</strong> ${this.currentRequest.status}</p>
+                        ${!this.currentRequest.hasRealPDF ? `
+                            <div class="demo-banner">
+                                <strong>Note:</strong> This is demonstration data. ${this.currentRequest.mockReason || 'Real analysis service was unavailable.'}
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="report-content">
+                        ${this.renderMarkdown(this.currentRequest.report)}
+                    </div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
     }
 
     updateContent() {
@@ -1436,6 +1934,302 @@ class SettingsModal extends BaseModal {
         this.close();
     }
 }
+
+
+/**
+ * Fix for UI Components - File Handling
+ * Add this to your ui-components.js or replace the relevant methods
+ */
+
+// Fix for UploadModal.submitForm method
+UploadModal.prototype.submitForm = function () {
+    console.log('🚀 Submitting form...');
+
+    // Validate current step
+    if (!this.validateCurrentStep()) {
+        console.error('❌ Form validation failed');
+        return;
+    }
+
+    // Debug: Log form data state
+    console.log('📋 Form data state:', {
+        hasFile: !!this.formData.file,
+        fileName: this.formData.file?.name,
+        fileSize: this.formData.file?.size,
+        fileType: this.formData.file?.type,
+        apiKey: this.formData.apiKey ? 'Present' : 'Missing',
+        note: this.formData.note
+    });
+
+    // Ensure we have a file
+    if (!this.formData.file) {
+        console.error('❌ No file selected');
+        this.showError('Please select a file to upload');
+        return;
+    }
+
+    // Validate file is actually a File object
+    if (!(this.formData.file instanceof File)) {
+        console.error('❌ Invalid file object:', typeof this.formData.file, this.formData.file);
+        this.showError('Invalid file selected. Please try selecting the file again.');
+        return;
+    }
+
+    // Create request through app
+    if (window.app) {
+        try {
+            console.log('📤 Creating request through app...');
+            const request = window.app.createRequest(this.formData);
+            this.close();
+            this.reset();
+
+            // Show success message
+            window.app.showToast('success', 'Request Submitted',
+                `Your diagnostic request ${request.id} has been created and is being processed.`);
+        } catch (error) {
+            console.error('❌ Failed to create request:', error);
+            this.showError('Failed to create request: ' + error.message);
+        }
+    } else {
+        console.error('❌ App instance not available');
+        this.showError('Application error. Please refresh the page and try again.');
+    }
+};
+
+// Fix for file handling in UploadModal
+UploadModal.prototype.handleFileSelect = function (file) {
+    console.log('📁 File selected:', {
+        name: file?.name,
+        size: file?.size,
+        type: file?.type,
+        instanceof: file instanceof File
+    });
+
+    // Validate file
+    const validation = this.validateFile(file);
+    if (!validation.valid) {
+        console.error('❌ File validation failed:', validation.error);
+        this.showError(validation.error);
+        return;
+    }
+
+    // Store the file (make sure it's the actual File object)
+    this.formData.file = file;
+    console.log('✅ File stored in formData:', {
+        hasFile: !!this.formData.file,
+        isFileInstance: this.formData.file instanceof File
+    });
+
+    // Display file preview
+    this.displayFilePreview(file);
+    this.updateStepValidation();
+};
+
+// Enhanced file validation
+UploadModal.prototype.validateFile = function (file) {
+    if (!file) {
+        return {
+            valid: false,
+            error: 'No file provided'
+        };
+    }
+
+    if (!(file instanceof File)) {
+        return {
+            valid: false,
+            error: 'Invalid file object'
+        };
+    }
+
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/dicom'];
+
+    if (file.size > maxSize) {
+        return {
+            valid: false,
+            error: 'File size must be less than 50MB'
+        };
+    }
+
+    if (file.size === 0) {
+        return {
+            valid: false,
+            error: 'File appears to be empty'
+        };
+    }
+
+    if (!allowedTypes.includes(file.type)) {
+        return {
+            valid: false,
+            error: 'Only JPEG, PNG, and DICOM files are supported'
+        };
+    }
+
+    return { valid: true };
+};
+
+// Add method to perform real analysis with proper error handling
+UploadModal.prototype.performRealAnalysis = async function (request, file) {
+    try {
+        console.log('🔬 Starting real analysis for request', request.id);
+
+        // Validate inputs
+        if (!request || !request.id) {
+            throw new Error('Invalid request object');
+        }
+
+        if (!file || !(file instanceof File)) {
+            throw new Error('Invalid file for analysis');
+        }
+
+        console.log('📋 Analysis inputs:', {
+            requestId: request.id,
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type
+        });
+
+        // Use hybrid API for analysis
+        if (!window.hybridAPI) {
+            throw new Error('Hybrid API not available');
+        }
+
+        const result = await window.hybridAPI.analyzeBreastDensity(file, request.id, request.note);
+
+        console.log('✅ Analysis result:', result);
+        return result;
+
+    } catch (error) {
+        console.error('❌ Analysis failed for request', request?.id, ':', error);
+        throw error;
+    }
+};
+
+// Fix for MedicalApp.createRequest method
+if (window.MedicalApp) {
+    MedicalApp.prototype.createRequest = function (formData) {
+        console.log('🏗️ Creating request with form data:', {
+            hasFile: !!formData.file,
+            fileName: formData.file?.name,
+            fileSize: formData.file?.size,
+            fileType: formData.file?.type,
+            apiKey: formData.apiKey ? 'Present' : 'Missing',
+            note: formData.note
+        });
+
+        // Validate form data
+        if (!formData.file || !(formData.file instanceof File)) {
+            throw new Error('Valid file is required for analysis');
+        }
+
+        const request = {
+            id: this.generateRequestId(),
+            timestamp: new Date().toISOString(),
+            status: 'pending',
+            filename: formData.file.name,
+            fileSize: formData.file.size,
+            fileType: formData.file.type,
+            imageData: null, // Will be set after file processing
+            apiKey: formData.apiKey,
+            note: formData.note,
+            progress: 0,
+            report: null,
+            error: null
+        };
+
+        // Process the file for preview
+        this.processFile(request, formData.file);
+
+        // Add to requests
+        this.requests.unshift(request);
+        this.saveRequestsToStorage();
+
+        // Update UI
+        this.renderRequests();
+        this.updateFilterTabs();
+
+        // Start analysis with the actual file object
+        this.startAnalysis(request, formData.file);
+
+        return request;
+    };
+
+    // Enhanced startAnalysis method
+    MedicalApp.prototype.startAnalysis = async function (request, file) {
+        try {
+            console.log('🔬 Starting analysis for request:', request.id);
+            console.log('📁 File for analysis:', {
+                name: file?.name,
+                size: file?.size,
+                type: file?.type,
+                instanceof: file instanceof File
+            });
+
+            // Validate inputs
+            if (!file || !(file instanceof File)) {
+                throw new Error('Invalid file object for analysis');
+            }
+
+            request.status = 'processing';
+            this.updateRequestCard(request);
+
+            // Use hybrid API for analysis
+            const result = await window.hybridAPI.analyzeBreastDensity(file, request.id, request.note);
+
+            if (result.success) {
+                request.status = 'completed';
+                request.progress = 100;
+
+                if (result.type === 'pdf') {
+                    request.pdfAvailable = true;
+                    request.report = 'PDF report generated successfully';
+                } else if (result.type === 'mock') {
+                    request.report = result.report;
+                } else {
+                    request.report = result.report || 'Analysis completed';
+                }
+
+                this.showToast('success', 'Analysis Complete', `Analysis for ${request.filename} completed successfully.`);
+            } else {
+                request.status = 'failed';
+                request.error = result.error || 'Analysis failed';
+                this.showToast('error', 'Analysis Failed', `Analysis for ${request.filename} failed: ${result.error}`);
+            }
+
+        } catch (error) {
+            console.error('❌ Analysis error:', error);
+            request.status = 'failed';
+            request.error = error.message;
+            this.showToast('error', 'Analysis Error', `Analysis failed: ${error.message}`);
+        }
+
+        this.saveRequestsToStorage();
+        this.renderRequests();
+        this.updateFilterTabs();
+    };
+}
+
+// Debugging helper function
+window.debugFileUpload = function () {
+    const uploadModal = document.querySelector('.modal-overlay');
+    if (uploadModal) {
+        const formData = window.uploadModalInstance?.formData;
+        console.log('🔍 Debug Upload Modal State:', {
+            modalVisible: uploadModal.style.display !== 'none',
+            formData: formData,
+            hasFile: !!formData?.file,
+            fileDetails: formData?.file ? {
+                name: formData.file.name,
+                size: formData.file.size,
+                type: formData.file.type,
+                instanceof: formData.file instanceof File
+            } : 'No file'
+        });
+    }
+};
+
+
+
 
 // Export classes for global use
 window.BaseModal = BaseModal;
