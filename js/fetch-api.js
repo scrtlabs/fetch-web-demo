@@ -303,7 +303,7 @@ class RealBreastDensityAPI {
         this.sslErrorDetected = false;
         // Get the current origin dynamically
         this.origin = window.location.origin;
-
+        this.includeAuthInHealthCheck = true;
         // Define headers with explicit origin
         this.defaultHeaders = {
             'Accept': 'application/json',
