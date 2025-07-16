@@ -163,17 +163,18 @@ class BreastDensityAPI {
         const timeoutId = setTimeout(() => controller.abort(), 5000);
 
         try {
-            const headers = {
-                'Accept': 'application/json',
-                'Origin': this.origin,
-                'X-Requested-With': 'XMLHttpRequest'
+            const requestHeaders = {
+                ...this.defaultHeaders,
+                // Remove Content-Type to let browser set it automatically for FormData
+                // This prevents multipart/form-data boundary issues
             };
+            delete requestHeaders['Content-Type'];
 
             console.log('🌐 Testing with origin header:', this.origin);
 
             const response = await fetch(`${this.baseUrl}/health`, {
                 method: 'GET',
-                headers: headers,
+                headers: requestHeaders,
                 signal: controller.signal,
                 mode: 'cors',
                 credentials: 'include',
