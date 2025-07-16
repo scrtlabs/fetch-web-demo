@@ -5,7 +5,7 @@
 
 // Enhanced fetch API implementation with explicit origin header handling
 
-class BreastDensityAPI {
+class RealBreastDensityAPI {
     constructor(baseUrl, apiKey) {
         this.baseUrl = baseUrl;
         this.apiKey = apiKey;
