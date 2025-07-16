@@ -362,25 +362,50 @@ class RealBreastDensityAPI {
         const timeoutId = setTimeout(() => controller.abort(), 5000);
 
         try {
-            const requestHeaders = {
-                ...this.defaultHeaders,
-                // Remove Content-Type to let browser set it automatically for FormData
-                // This prevents multipart/form-data boundary issues
-            };
-            delete requestHeaders['Content-Type'];
+            console.log('🔄 Testing CORS connectivity...');
+            console.log('📍 URL:', `${this.baseUrl}/health`);
 
-            const response = await fetch(`${this.baseUrl}/health`, {
+            // Prepare headers safely
+            let requestHeaders = {};
+
+            // Only add Authorization if it exists and we need it
+            // For health check, we typically don't need auth
+            if (this.defaultHeaders && this.includeAuthInHealthCheck) {
+                requestHeaders = { ...this.defaultHeaders };
+                // Remove Content-Type as it's not needed for GET requests
+                delete requestHeaders['Content-Type'];
+            } else {
+                // Minimal headers for health check
+                requestHeaders = {
+                    'Accept': 'application/json'
+                };
+            }
+
+            console.log('📋 Request headers:', requestHeaders);
+
+            const fetchOptions = {
                 method: 'GET',
                 headers: requestHeaders,
                 signal: controller.signal,
                 mode: 'cors',
-                credentials: 'include',
+                credentials: 'omit', // Change from 'include' to 'omit' to avoid credential issues
                 referrerPolicy: 'strict-origin-when-cross-origin'
-            });
+            };
+
+            console.log('⚙️ Fetch options:', fetchOptions);
+
+            const response = await fetch(`${this.baseUrl}/health`, fetchOptions);
 
             clearTimeout(timeoutId);
 
             console.log(`✅ CORS connectivity test passed: ${response.status}`);
+            console.log('📊 Response details:', {
+                status: response.status,
+                statusText: response.statusText,
+                headers: Object.fromEntries(response.headers.entries()),
+                url: response.url
+            });
+
             this.sslErrorDetected = false;
 
             return {
@@ -388,9 +413,25 @@ class RealBreastDensityAPI {
                 status: response.status,
                 statusText: response.statusText,
                 available: response.status < 500,
-                strategy: 'cors'
+                strategy: 'cors',
+                headers: Object.fromEntries(response.headers.entries())
             };
+
+        } catch (error) {
+            clearTimeout(timeoutId);
+
+            console.error('❌ CORS connectivity test failed:', error);
+            console.error('📋 Error details:', {
+                name: error.name,
+                message: error.message,
+                stack: error.stack?.substring(0, 200)
+            });
+
+            // Re-throw the error to be handled by the calling function
+            throw error;
+
         } finally {
+            // Ensure timeout is always cleared
             clearTimeout(timeoutId);
         }
     }
