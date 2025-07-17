@@ -3,293 +3,6 @@
  * Handles SSL certificate errors gracefully and provides fallback to mock data
  */
 
-// Enhanced fetch API implementation with explicit origin header handling
-
-class BreastDensityAPI {
-    constructor(baseUrl, apiKey) {
-        this.baseUrl = baseUrl;
-        this.apiKey = apiKey;
-        this.sslErrorDetected = false;
-
-        // Get the current origin dynamically
-        this.origin = window.location.origin;
-
-        // Define headers with explicit origin
-        this.defaultHeaders = {
-            'Accept': 'application/json',
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Origin': this.origin,  // Explicitly set origin header
-            'X-Requested-With': 'XMLHttpRequest'
-        };
-
-        console.log(`🌐 Origin header set to: ${this.origin}`);
-    }
-
-    /**
-     * Make request with full headers including explicit origin
-     */
-    async makeRequestWithFullHeaders(file, requestId, note) {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const metadata = {
-            format: 'pdf',
-            report_id: requestId,
-            note: note || '',
-            timestamp: new Date().toISOString()
-        };
-        formData.append('metadata', JSON.stringify(metadata));
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 600000);
-
-        try {
-            // Create request with explicit origin header
-            const requestHeaders = {
-                ...this.defaultHeaders,
-                // Remove Content-Type to let browser set it automatically for FormData
-                // This prevents multipart/form-data boundary issues
-            };
-            delete requestHeaders['Content-Type'];
-
-            console.log('📤 Request headers being sent:', requestHeaders);
-            console.log('🌐 Explicit origin header:', requestHeaders['Origin']);
-
-            const response = await fetch(`${this.baseUrl}/predict/breast-density`, {
-                method: 'POST',
-                headers: requestHeaders,
-                body: formData,
-                signal: controller.signal,
-                mode: 'cors',
-                credentials: 'include', // Changed from 'omit' to include credentials
-                // Explicitly set referrer policy to ensure origin is sent
-                referrerPolicy: 'strict-origin-when-cross-origin'
-            });
-
-            return await this.processResponse(response, requestId, file);
-        } finally {
-            clearTimeout(timeoutId);
-        }
-    }
-
-    /**
-     * Make request with minimal headers but still include origin
-     */
-    async makeRequestWithMinimalHeaders(file, requestId, note) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('format', 'pdf');
-        formData.append('report_id', requestId);
-        formData.append('note', note || '');
-        formData.append('timestamp', new Date().toISOString());
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 600000);
-
-        try {
-            // Minimal headers but still include origin and authorization
-            const minimalHeaders = {
-                'Authorization': `Bearer ${this.apiKey}`,
-                'Origin': this.origin,
-                'X-Requested-With': 'XMLHttpRequest'
-            };
-
-            console.log('📤 Minimal request headers:', minimalHeaders);
-
-            const response = await fetch(`${this.baseUrl}/predict/breast-density`, {
-                method: 'POST',
-                headers: minimalHeaders,
-                body: formData,
-                signal: controller.signal,
-                mode: 'cors',
-                credentials: 'include',
-                referrerPolicy: 'strict-origin-when-cross-origin'
-            });
-
-            return await this.processResponse(response, requestId, file);
-        } finally {
-            clearTimeout(timeoutId);
-        }
-    }
-
-    /**
-     * Alternative approach: Use fetch with explicit origin in request
-     */
-    async makeRequestWithExplicitOrigin(file, requestId, note) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('format', 'pdf');
-        formData.append('report_id', requestId);
-        formData.append('note', note || '');
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 600000);
-
-        try {
-            // Create a new Request object with explicit origin
-            const request = new Request(`${this.baseUrl}/predict/breast-density`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.apiKey}`,
-                    'Origin': this.origin,
-                    'X-Requested-With': 'XMLHttpRequest',
-                    // Let browser set Content-Type for FormData
-                },
-                body: formData,
-                mode: 'cors',
-                credentials: 'include',
-                referrerPolicy: 'strict-origin-when-cross-origin'
-            });
-
-            console.log('📤 Request object created with origin:', request.headers.get('Origin'));
-
-            const response = await fetch(request, {
-                signal: controller.signal
-            });
-
-            return await this.processResponse(response, requestId, file);
-        } finally {
-            clearTimeout(timeoutId);
-        }
-    }
-
-    /**
-     * Test connectivity with proper origin header
-     */
-    async testConnectivityWithOrigin() {
-        console.log('🔍 Testing API connectivity with origin header...');
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-        try {
-            const requestHeaders = {
-                ...this.defaultHeaders,
-                // Remove Content-Type to let browser set it automatically for FormData
-                // This prevents multipart/form-data boundary issues
-            };
-            delete requestHeaders['Content-Type'];
-
-            console.log('🌐 Testing with origin header:', this.origin);
-
-            const response = await fetch(`${this.baseUrl}/health`, {
-                method: 'GET',
-                headers: requestHeaders,
-                signal: controller.signal,
-                mode: 'cors',
-                credentials: 'include',
-                referrerPolicy: 'strict-origin-when-cross-origin'
-            });
-
-            clearTimeout(timeoutId);
-
-            console.log(`✅ Connectivity test passed with origin header: ${response.status}`);
-
-            return {
-                success: true,
-                status: response.status,
-                statusText: response.statusText,
-                available: response.status < 500,
-                strategy: 'cors-with-origin'
-            };
-
-        } catch (error) {
-            clearTimeout(timeoutId);
-            console.error('❌ Connectivity test failed:', error.message);
-
-            return {
-                success: false,
-                error: error.message,
-                available: false
-            };
-        } finally {
-            clearTimeout(timeoutId);
-        }
-    }
-
-    /**
-     * Enhanced breast density analysis with proper origin handling
-     */
-    async analyzeBreastDensity(file, requestId, note = '') {
-        try {
-            console.log(`🔬 Starting API analysis with origin header for request ${requestId}`);
-            console.log('🌐 Using origin:', this.origin);
-
-            // Validate file
-            if (!file || !(file instanceof File)) {
-                throw new Error('Invalid file provided');
-            }
-
-            // Try multiple strategies with proper origin headers
-            const strategies = [
-                () => this.makeRequestWithExplicitOrigin(file, requestId, note),
-                () => this.makeRequestWithFullHeaders(file, requestId, note),
-                () => this.makeRequestWithMinimalHeaders(file, requestId, note)
-            ];
-
-            for (let i = 0; i < strategies.length; i++) {
-                try {
-                    console.log(`📤 Trying strategy ${i + 1}/${strategies.length} with origin header`);
-                    const result = await strategies[i]();
-
-                    if (result.success) {
-                        console.log(`✅ Strategy ${i + 1} succeeded with origin header`);
-                        return result;
-                    }
-                } catch (error) {
-                    console.log(`❌ Strategy ${i + 1} failed:`, error.message);
-
-                    if (i === strategies.length - 1) {
-                        throw error;
-                    }
-                }
-            }
-
-            throw new Error('All request strategies failed despite origin header');
-
-        } catch (error) {
-            console.error('❌ API request failed even with origin header:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Process API response
-     */
-    async processResponse(response, requestId, file) {
-        console.log(`📥 Received response: ${response.status} ${response.statusText}`);
-
-        // Log response headers for debugging
-        const responseHeaders = {};
-        response.headers.forEach((value, key) => {
-            responseHeaders[key] = value;
-        });
-        console.log('📋 Response headers:', responseHeaders);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorDetails;
-
-            try {
-                errorDetails = JSON.parse(errorText);
-            } catch {
-                errorDetails = { error: 'Unknown error', message: errorText };
-            }
-
-            throw new Error(`API Error (${response.status}): ${JSON.stringify(errorDetails)}`);
-        }
-
-        const result = await response.json();
-
-        return {
-            success: true,
-            type: 'real',
-            requestId: requestId,
-            data: result,
-            message: 'Analysis completed successfully'
-        };
-    }
-}
 
 // Usage example:
 // const api = new BreastDensityAPIWithOrigin('https://secretai-fetch-morai.scrtlabs.com:23434', 'your-api-key');
@@ -304,6 +17,7 @@ class RealBreastDensityAPI {
         // Get the current origin dynamically
         this.origin = window.location.origin;
         this.includeAuthInHealthCheck = true;
+        this.pdfCache = new Map(); // Add PDF cache
         // Define headers with explicit origin
         this.defaultHeaders = {
             'Accept': 'application/json',
@@ -628,23 +342,14 @@ The application will use demo data until this is resolved.
      */
     async analyzeBreastDensity(file, requestId, note = '') {
         try {
-            console.log(`🔬 Starting real API analysis for request ${requestId} (handling CORS/SSL errors)`);
-            console.log('📋 File details:', {
-                file: file,
-                name: file?.name,
-                size: file?.size,
-                type: file?.type,
-                instanceof: file instanceof File
-            });
+            console.log(`🔬 Starting real API analysis for request ${requestId}`);
 
             // Enhanced file validation
             if (!file) {
-                console.error('❌ File is null or undefined');
                 throw new Error('No file provided for analysis');
             }
 
             if (!(file instanceof File) && !(file instanceof Blob)) {
-                console.error('❌ Invalid file type:', typeof file, file);
                 throw new Error('Invalid file type - must be a File or Blob object');
             }
 
@@ -656,7 +361,7 @@ The application will use demo data until this is resolved.
                 throw new Error('File size must be less than 50MB');
             }
 
-            // Check file type if available (File objects have type, Blobs might not)
+            // Check file type if available
             if (file.type) {
                 const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/dicom'];
                 if (!allowedTypes.includes(file.type)) {
@@ -718,6 +423,68 @@ The application will use demo data until this is resolved.
         }
     }
 
+
+    /**
+     * Generate mock result when real API fails
+     */
+    generateMockResult(requestId, file, reason) {
+        const mockReport = `# Medical Imaging Analysis Report
+
+## Analysis Summary
+**Status:** Demo Analysis Complete  
+**Report ID:** ${requestId}  
+**Original File:** ${file.name}  
+**Analysis Date:** ${new Date().toLocaleDateString()}  
+**Mode:** Demonstration Mode
+
+## Important Notice
+⚠️ **This is a demonstration analysis using simulated data.**
+
+**Reason:** ${reason}
+
+## Demo Analysis Features
+- ✅ Breast density classification simulation
+- ✅ Simulated BI-RADS assessment
+- ✅ Mock quantitative measurements
+- ✅ Demo clinical recommendations
+
+## Simulated Findings
+**Breast Density Category:** B - Scattered fibroglandular density  
+**Estimated Density:** 25-30% (Simulated)  
+**Confidence Score:** 0.92 (Demo value)
+
+### Mock Measurements
+- **Total breast area:** 156.2 cm² (simulated)
+- **Dense tissue area:** 42.8 cm² (simulated)  
+- **Density percentage:** 27.4% (simulated)
+
+### Demo Recommendations
+1. **Routine follow-up:** Annual screening mammography
+2. **Risk assessment:** Standard risk category (simulated)
+3. **Additional imaging:** Not indicated in this simulation
+
+## Technical Details
+- **Processing method:** Simulated AI analysis
+- **Model version:** Demo v1.0
+- **Processing time:** Instant (demo mode)
+- **Quality metrics:** All simulated values
+
+---
+
+**Disclaimer:** This is demonstration data only. For real medical analysis, ensure the API server is properly configured and accessible.
+
+*Demo report generated on ${new Date().toLocaleDateString()}*`;
+
+        return {
+            success: true,
+            type: 'mock',
+            report: mockReport,
+            requestId: requestId,
+            mockReason: reason,
+            message: 'Demo analysis completed'
+        };
+    }
+
     /**
      * Make request with full headers
      */
@@ -738,12 +505,10 @@ The application will use demo data until this is resolved.
 
         try {
             const requestHeaders = {
-                ...this.defaultHeaders,
-                // Remove Content-Type to let browser set it automatically for FormData
-                // This prevents multipart/form-data boundary issues
+                ...this.defaultHeaders
+                // Don't set Content-Type - let browser set it for FormData
             };
             delete requestHeaders['Content-Type'];
-
 
             const response = await fetch(`${this.baseUrl}/predict/breast-density`, {
                 method: 'POST',
@@ -751,8 +516,7 @@ The application will use demo data until this is resolved.
                 body: formData,
                 signal: controller.signal,
                 mode: 'cors',
-                credentials: 'include',
-                referrerPolicy: 'strict-origin-when-cross-origin'
+                credentials: 'omit' // Changed to omit for consistency
             });
 
             return await this.processResponse(response, requestId, file);
@@ -767,8 +531,6 @@ The application will use demo data until this is resolved.
     async makeRequestWithMinimalHeaders(file, requestId, note) {
         const formData = new FormData();
         formData.append('file', file);
-
-        // Add metadata as form field instead of JSON to avoid content-type issues
         formData.append('format', 'pdf');
         formData.append('report_id', requestId);
         formData.append('note', note || '');
@@ -778,10 +540,9 @@ The application will use demo data until this is resolved.
         const timeoutId = setTimeout(() => controller.abort(), 600000);
 
         try {
-            // Only include essential headers to avoid CORS preflight
+            // Minimal headers to avoid CORS preflight
             const response = await fetch(`${this.baseUrl}/predict/breast-density`, {
                 method: 'POST',
-                // No custom headers to avoid preflight
                 body: formData,
                 signal: controller.signal,
                 mode: 'cors',
@@ -834,10 +595,20 @@ The application will use demo data until this is resolved.
     }
 
     /**
+     * Get PDF blob for a request
+     */
+    getPDFBlob(requestId) {
+        const blob = this.pdfCache.get(requestId);
+        console.log('📄 Getting PDF blob for request:', requestId, blob ? `Found (${blob.size} bytes)` : 'Not found');
+        return blob;
+    }
+
+
+    /**
      * Process API response
      */
     async processResponse(response, requestId, file) {
-        console.log(`📥 Received response: ${response.status} ${response.statusText}`);
+        console.log(`📥 Received response: ${response.status}`);
 
         // Log response headers for debugging
         const responseHeaders = {};
@@ -869,15 +640,21 @@ The application will use demo data until this is resolved.
 
             console.log(`✅ PDF received successfully: ${pdfBlob.size} bytes`);
 
+            // FIXED: Cache the PDF blob for later retrieval
+            this.pdfCache.set(requestId, pdfBlob);
+            console.log('📄 PDF cached for request:', requestId, 'Size:', pdfBlob.size);
+
             return {
                 success: true,
                 type: 'pdf',
                 data: pdfBlob,
                 requestId: response.headers.get('X-Request-ID') || requestId,
-                originalFilename: response.headers.get('X-Original-Filename') || file.name,
-                generationTime: response.headers.get('X-Generation-Time') || new Date().toISOString(),
-                modelName: response.headers.get('X-Model-Name') || 'BreastDensityClassification',
-                size: pdfBlob.size
+                metadata: {
+                    originalFilename: response.headers.get('X-Original-Filename') || file.name,
+                    generationTime: response.headers.get('X-Generation-Time') || new Date().toISOString(),
+                    modelName: response.headers.get('X-Model-Name') || 'BreastDensityClassification',
+                    size: pdfBlob.size
+                }
             };
 
         } else if (contentType.includes('application/json')) {
@@ -901,6 +678,7 @@ The application will use demo data until this is resolved.
             throw new Error(`Unexpected response type: ${contentType}. Response: ${textData.substring(0, 200)}`);
         }
     }
+
 
     /**
      * Check processing status (for future use)
@@ -1228,14 +1006,187 @@ The mammographic images demonstrate ${selectedDensity === 'A' ? 'almost entirely
             lastTest: new Date().toISOString()
         };
     }
+
+    /**
+    * Get PDF blob (delegate to realAPI)
+    */
+    getPDFBlob(requestId) {
+        return this.realAPI ? this.realAPI.getPDFBlob(requestId) : null;
+    }
 }
 
 // Create and export global instance
 window.RealBreastDensityAPI = RealBreastDensityAPI;
 window.HybridBreastDensityAPI = HybridBreastDensityAPI;
 
-// Initialize global hybrid API instance
 if (!window.hybridAPI) {
     window.hybridAPI = new HybridBreastDensityAPI();
-    console.log('🚀 Global Hybrid API instance created');
+    console.log('🚀 Global Real API instance created');
 }
+
+/**
+ * FIXED: Global PDF access function
+ */
+window.getPDFBlob = function (requestId) {
+    if (window.hybridAPI && window.hybridAPI.realAPI && typeof window.hybridAPI.realAPI.getPDFBlob === 'function') {
+        return window.hybridAPI.realAPI.getPDFBlob(requestId);
+    }
+    console.warn('⚠️ hybridAPI.realAPI not available or getPDFBlob method missing');
+    return null;
+};
+
+/**
+ * FIXED: Download PDF function
+ */
+// Enhanced initialization for PDF support
+document.addEventListener('DOMContentLoaded', function () {
+    console.log('📄 Initializing PDF integration...');
+
+    // Ensure the app has PDF download capability
+    if (window.app && !window.app.downloadPDFReport) {
+        window.app.downloadPDFReport = function (requestId) {
+            console.log('📥 Downloading PDF for request:', requestId);
+
+            const pdfBlob = window.hybridAPI ? window.hybridAPI.getPDFBlob(requestId) : null;
+            if (!pdfBlob) {
+                console.error('❌ PDF blob not found for request:', requestId);
+                if (this.showToast) {
+                    this.showToast('error', 'Download Failed', 'PDF report not available for download.');
+                }
+                return;
+            }
+
+            try {
+                const url = URL.createObjectURL(pdfBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `medical_report_${requestId}.pdf`;
+                link.style.display = 'none';
+
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+                console.log('✅ PDF download initiated');
+
+                if (this.showToast) {
+                    this.showToast('success', 'Download Started', 'PDF report download has been initiated.');
+                }
+
+            } catch (error) {
+                console.error('❌ Error downloading PDF:', error);
+                if (this.showToast) {
+                    this.showToast('error', 'Download Failed', 'Failed to download PDF report.');
+                }
+            }
+        };
+    }
+
+    // FIXED: Enhance existing report modal to use realAPI
+    if (window.reportModal && window.reportModal.initialize) {
+        const originalInitialize = window.reportModal.initialize;
+        window.reportModal.initialize = function (request) {
+            console.log('📋 Enhanced ReportModal.initialize called for request:', request.id);
+
+            // Call original initialize
+            originalInitialize.call(this, request);
+
+            // Add PDF support if available
+            if (request.hasRealPDF) {
+                console.log('📄 Request has real PDF - enabling PDF viewer');
+                this.enablePDFViewer(request);
+            }
+        };
+
+        // Add PDF viewer capability to existing modal
+        window.reportModal.enablePDFViewer = function (request) {
+            const modal = this.element;
+            if (!modal) return;
+
+            // Add PDF view button to report header if not exists
+            const reportHeader = modal.querySelector('.report-header');
+            if (reportHeader && !reportHeader.querySelector('.pdf-view-btn')) {
+                const pdfButton = document.createElement('button');
+                pdfButton.className = 'btn btn-sm btn-primary pdf-view-btn';
+                pdfButton.innerHTML = '📄 View Full PDF Report';
+                pdfButton.onclick = () => this.openPDFViewer(request);
+
+                const buttonContainer = reportHeader.querySelector('div') || reportHeader;
+                buttonContainer.appendChild(pdfButton);
+            }
+        };
+
+        // FIXED: PDF viewer opening using realAPI
+        window.reportModal.openPDFViewer = function (request) {
+            const pdfBlob = window.hybridAPI && window.hybridAPI.realAPI ? window.hybridAPI.realAPI.getPDFBlob(request.id) : null;
+            if (!pdfBlob) {
+                console.error('❌ PDF blob not found for request:', request.id);
+                return;
+            }
+
+            // Create PDF viewer window
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            const pdfWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+
+            pdfWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Medical Report - ${request.id}</title>
+                    <style>
+                        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+                        .header { background: #2c5aa0; color: white; padding: 1rem; text-align: center; }
+                        .pdf-container { width: 100%; height: calc(100vh - 80px); }
+                        iframe { width: 100%; height: 100%; border: none; }
+                        .download-btn { 
+                            position: absolute; top: 1rem; right: 1rem; 
+                            background: white; color: #2c5aa0; border: none; 
+                            padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h2>📄 Medical Analysis Report - ${request.id}</h2>
+                        <button class="download-btn" onclick="downloadPDF()">📥 Download</button>
+                    </div>
+                    <div class="pdf-container">
+                        <iframe src="${pdfUrl}"></iframe>
+                    </div>
+                    <script>
+                        function downloadPDF() {
+                            const link = document.createElement('a');
+                            link.href = '${pdfUrl}';
+                            link.download = 'medical_report_${request.id}.pdf';
+                            link.click();
+                        }
+                        
+                        // Cleanup URL when window closes
+                        window.addEventListener('beforeunload', function() {
+                            URL.revokeObjectURL('${pdfUrl}');
+                        });
+                    </script>
+                </body>
+                </html>
+            `);
+
+            pdfWindow.document.close();
+        };
+    }
+
+    console.log('✅ PDF integration initialized');
+});
+
+/**
+ * FIXED: Update PDF Integration exports
+ */
+window.PDFIntegration = {
+    isPDFSupported,
+    getPDFBlob: window.getPDFBlob,
+    realAPI: window.realAPI // Add reference to real API
+};
+
+console.log('📄 PDF Integration script loaded');
+console.log('🔍 PDF support detected:', isPDFSupported());

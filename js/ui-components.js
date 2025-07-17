@@ -776,9 +776,7 @@ class ReportModal extends BaseModal {
             keyboard: true
         });
         this.currentRequest = null;
-        this.imageZoom = 1;
-        this.imagePosition = { x: 0, y: 0 };
-        this.isDragging = false;
+        this.currentPDFUrl = null;
     }
 
     getTemplate() {
@@ -789,50 +787,109 @@ class ReportModal extends BaseModal {
                     <div class="report-actions">
                         <button class="btn btn-sm btn-secondary" id="print-report">🖨️ Print</button>
                         <button class="btn btn-sm btn-secondary" id="export-report">📄 Export</button>
-                        <button class="btn btn-sm btn-secondary" id="download-pdf-report">📥 Download as PDF</button>
+                        <button class="btn btn-sm btn-primary" id="download-pdf-report" style="display: none;">📥 Download PDF</button>
                         <button class="modal-close">&times;</button>
                     </div>
                 </div>
                 <div class="modal-body" style="padding: 0; overflow: auto; max-height: calc(95vh - 120px);">
                     <div class="report-container">
-                        <div class="image-panel">
-                            <div class="image-viewer">
-                                <div class="image-viewer-header">
-                                    <h4 class="image-title">Medical Image</h4>
-                                    <div class="image-controls">
-                                        <button class="image-control-btn" id="zoom-out" title="Zoom Out">−</button>
-                                        <button class="image-control-btn" id="zoom-reset" title="Reset Zoom">⌂</button>
-                                        <button class="image-control-btn" id="zoom-in" title="Zoom In">+</button>
-                                        <button class="image-control-btn" id="fullscreen" title="Fullscreen">⛶</button>
+                        <!-- PDF Viewer Section -->
+                        <div id="pdf-viewer-section" style="display: none;">
+                            <div class="pdf-viewer-header" style="padding: 1rem; background: #f8f9fa; border-bottom: 1px solid #ddd;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <h4 style="margin: 0; color: #2c5aa0;">📄 AI Medical Analysis Report</h4>
+                                        <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem; color: #666;">
+                                            Real-time AI analysis • Generated from actual API response
+                                        </p>
+                                    </div>
+                                    <div class="pdf-actions">
+                                        <button class="btn btn-sm btn-secondary" onclick="window.app.downloadPDFReport('${this.currentRequest?.id}')">
+                                            📥 Download
+                                        </button>
+                                        <button class="btn btn-sm btn-secondary" onclick="this.openPDFInNewWindow()">
+                                            🔗 Open in New Tab
+                                        </button>
+                                        <button class="btn btn-sm btn-secondary" onclick="this.switchToSummaryView()">
+                                            📋 Summary View
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="image-display">
-                                    <img class="medical-image" alt="Medical Image">
-                                    <div class="zoom-indicator">100%</div>
-                                </div>
+                            </div>
+                            <div class="pdf-container" style="height: 70vh; overflow: hidden;">
+                                <iframe id="pdf-iframe" 
+                                        src="" 
+                                        width="100%" 
+                                        height="100%"
+                                        style="border: none;">
+                                    <div style="padding: 2rem; text-align: center;">
+                                        <p>Your browser does not support PDF viewing.</p>
+                                        <button class="btn btn-primary" onclick="window.app.downloadPDFReport('${this.currentRequest?.id}')">
+                                            📥 Download PDF Instead
+                                        </button>
+                                    </div>
+                                </iframe>
                             </div>
                         </div>
-                        <div class="report-panel">
-                            <div class="report-header">
-                                <h3 class="report-title">Diagnostic Analysis</h3>
-                                <div class="report-meta">
-                                    <div class="report-meta-item">
-                                        <span class="medical-icon report"></span>
-                                        <span>Report ID: <span id="report-id"></span></span>
+
+                        <!-- Summary/Markdown Section -->
+                        <div id="summary-viewer-section">
+                            <div class="image-panel" style="width: 300px; flex-shrink: 0; border-right: 1px solid #eee;">
+                                <div class="image-viewer">
+                                    <div class="image-viewer-header">
+                                        <h4>Medical Image</h4>
+                                        <div class="image-controls">
+                                            <button class="btn btn-sm btn-secondary" id="zoom-in">🔍+</button>
+                                            <button class="btn btn-sm btn-secondary" id="zoom-out">🔍-</button>
+                                            <button class="btn btn-sm btn-secondary" id="reset-zoom">⟲</button>
+                                        </div>
                                     </div>
-                                    <div class="report-meta-item">
-                                        <span class="medical-icon calendar"></span>
-                                        <span>Date: <span id="report-date"></span></span>
-                                    </div>
-                                    <div class="report-meta-item">
-                                        <span class="medical-icon patient"></span>
-                                        <span>Status: <span id="report-status"></span></span>
+                                    <div class="image-container">
+                                        <img class="medical-image" src="" alt="Medical Image" id="medical-image">
+                                        <div class="image-overlay">
+                                            <div class="image-title" id="image-title">Loading...</div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="report-content">
-                                <div class="medical-report" id="report-markdown">
-                                    <!-- Markdown content will be rendered here -->
+
+                            <div class="report-panel" style="flex: 1; padding: 0;">
+                                <div class="report-header" style="padding: 1rem; background: #f8f9fa; border-bottom: 1px solid #ddd;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <div>
+                                            <h4 style="margin: 0;">Report Summary</h4>
+                                            <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem; color: #666;" id="report-meta">
+                                                Report ID: <span id="report-id">Loading...</span> • 
+                                                Date: <span id="report-date">Loading...</span>
+                                            </p>
+                                        </div>
+                                        <div id="pdf-available-indicator" style="display: none;">
+                                            <button class="btn btn-sm btn-primary" onclick="this.switchToPDFView()">
+                                                📄 View Full PDF Report
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="report-content" style="padding: 1rem; height: calc(70vh - 100px); overflow-y: auto;">
+                                    <!-- Processing State -->
+                                    <div id="processing-state" style="display: none;">
+                                        <div style="text-align: center; padding: 2rem;">
+                                            <div class="loading-spinner" style="margin: 0 auto 1rem;"></div>
+                                            <h4>Processing Analysis...</h4>
+                                            <p id="processing-message">Please wait while we analyze your medical image.</p>
+                                            <div class="progress-bar" style="margin-top: 1rem;">
+                                                <div class="progress-fill" id="progress-fill" style="width: 0%;"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Completed Report -->
+                                    <div id="completed-report" style="display: none;">
+                                        <div id="medical-report-content">
+                                            <!-- Report content will be inserted here -->
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -842,226 +899,234 @@ class ReportModal extends BaseModal {
         `;
     }
 
-    setupEventListeners(modal) {
-        super.setupEventListeners(modal);
-
-        // Image controls
-        modal.querySelector('#zoom-in').addEventListener('click', () => this.zoomIn());
-        modal.querySelector('#zoom-out').addEventListener('click', () => this.zoomOut());
-        modal.querySelector('#zoom-reset').addEventListener('click', () => this.resetZoom());
-        modal.querySelector('#fullscreen').addEventListener('click', () => this.toggleFullscreen());
-
-        // Image drag functionality
-        const imageDisplay = modal.querySelector('.image-display');
-        const medicalImage = modal.querySelector('.medical-image');
-
-        imageDisplay.addEventListener('mousedown', (e) => this.startDrag(e));
-        imageDisplay.addEventListener('mousemove', (e) => this.drag(e));
-        imageDisplay.addEventListener('mouseup', () => this.endDrag());
-        imageDisplay.addEventListener('mouseleave', () => this.endDrag());
-
-        // Mouse wheel zoom
-        imageDisplay.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            if (e.deltaY < 0) {
-                this.zoomIn();
-            } else {
-                this.zoomOut();
-            }
-        });
-
-        // Action buttons
-        modal.querySelector('#print-report').addEventListener('click', () => this.printReport());
-        modal.querySelector('#export-report').addEventListener('click', () => this.exportReport());
-        modal.querySelector('#download-pdf-report').addEventListener('click', () => this.downloadPDFReport());
-    }
-
     /**
-     * Updated initialize method to handle real PDFs
+     * Initialize modal with request data
      */
     initialize(request) {
         this.currentRequest = request;
-        this.updateContent();
+        console.log('📋 Initializing ReportModal with request:', request.id);
 
-        // If this is a real PDF report, load it
-        if (request.hasRealPDF) {
-            this.loadRealPDFReport();
+        this.updateContent();
+        this.setupEventListeners();
+
+        // Check if PDF is available and display accordingly
+        if (request.hasRealPDF && window.app && window.app.getPDFBlob) {
+            console.log('📄 PDF available - setting up PDF viewer');
+            this.setupPDFViewer();
+        } else {
+            console.log('📋 No PDF available - showing summary view');
+            this.showSummaryView();
         }
     }
 
     /**
-     * Load and display real PDF report
+     * Setup PDF viewer
      */
-    async loadRealPDFReport() {
+    async setupPDFViewer() {
         try {
-            console.log(`📄 Loading real PDF for request ${this.currentRequest.id}`);
-
-            const pdfBlob = await window.hybridAPI.getPDFBlob(this.currentRequest.id);
+            const pdfBlob = window.app.getPDFBlob(this.currentRequest.id);
 
             if (pdfBlob) {
-                this.displayPDFInModal(pdfBlob);
+                console.log('📄 Setting up PDF viewer with blob:', pdfBlob.size, 'bytes');
+
+                // Create object URL for the PDF
+                this.currentPDFUrl = URL.createObjectURL(pdfBlob);
+
+                // Show PDF viewer section
+                this.showPDFView();
+
+                // Load PDF in iframe
+                const iframe = this.element.querySelector('#pdf-iframe');
+                if (iframe) {
+                    iframe.src = this.currentPDFUrl;
+                }
+
+                // Show PDF download button
+                const downloadBtn = this.element.querySelector('#download-pdf-report');
+                if (downloadBtn) {
+                    downloadBtn.style.display = 'inline-block';
+                    downloadBtn.onclick = () => window.app.downloadPDFReport(this.currentRequest.id);
+                }
+
+                // Show PDF available indicator in summary view
+                const indicator = this.element.querySelector('#pdf-available-indicator');
+                if (indicator) {
+                    indicator.style.display = 'block';
+                }
+
             } else {
-                console.warn('⚠️ PDF blob not found, falling back to markdown report');
-                this.displayMarkdownReport();
+                console.warn('⚠️ PDF blob not found, falling back to summary view');
+                this.showSummaryView();
             }
 
         } catch (error) {
-            console.error('❌ Failed to load PDF report:', error);
-            this.displayMarkdownReport();
+            console.error('❌ Error setting up PDF viewer:', error);
+            this.showSummaryView();
         }
     }
 
     /**
-     * Display PDF in the modal
+     * Show PDF view
      */
-    displayPDFInModal(pdfBlob) {
-        const reportContent = this.element.querySelector('#medical-report-content');
-        const processingState = this.element.querySelector('#processing-state');
-        const completedReport = this.element.querySelector('#completed-report');
+    showPDFView() {
+        const pdfSection = this.element.querySelector('#pdf-viewer-section');
+        const summarySection = this.element.querySelector('#summary-viewer-section');
 
-        // Hide processing state and show completed report
-        if (processingState) processingState.style.display = 'none';
-        if (completedReport) completedReport.style.display = 'block';
-
-        // Create PDF viewer
-        const pdfUrl = URL.createObjectURL(pdfBlob);
-
-        const pdfViewer = `
-            <div class="pdf-report-viewer">
-                <div class="pdf-controls">
-                    <button class="btn btn-secondary" onclick="window.app.downloadPDFReport('${this.currentRequest.id}')">
-                        📄 Download PDF
-                    </button>
-                    <button class="btn btn-secondary" onclick="this.openPDFInNewWindow('${pdfUrl}')">
-                        🔗 Open in New Window
-                    </button>
-                    <span class="pdf-info">
-                        Real AI Analysis Report (${this.formatFileSize(pdfBlob.size)})
-                    </span>
-                </div>
-                <div class="pdf-container">
-                    <iframe 
-                        src="${pdfUrl}" 
-                        width="100%" 
-                        height="600px"
-                        style="border: 1px solid #ddd; border-radius: 8px;">
-                        <p>Your browser does not support PDF viewing. 
-                           <a href="${pdfUrl}" target="_blank">Click here to download the PDF</a>
-                        </p>
-                    </iframe>
-                </div>
-                <div class="pdf-metadata">
-                    <h4>Analysis Details</h4>
-                    <div class="metadata-grid">
-                        <div><strong>Report ID:</strong> ${this.currentRequest.id}</div>
-                        <div><strong>Original File:</strong> ${this.currentRequest.filename}</div>
-                        <div><strong>Analysis Date:</strong> ${new Date(this.currentRequest.timestamp).toLocaleDateString()}</div>
-                        <div><strong>File Size:</strong> ${this.formatFileSize(pdfBlob.size)}</div>
-                        ${this.currentRequest.apiMetadata ? `
-                            <div><strong>Model:</strong> ${this.currentRequest.apiMetadata.modelName || 'Unknown'}</div>
-                            <div><strong>Generation:</strong> ${this.currentRequest.apiMetadata.generationTime || 'Unknown'}</div>
-                        ` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-
-        reportContent.innerHTML = pdfViewer;
-
-        // Store URL for cleanup
-        this.currentPDFUrl = pdfUrl;
-    }
-
-    /**
-     * Display markdown report (fallback or demo mode)
-     */
-    displayMarkdownReport() {
-        const reportContent = this.element.querySelector('#medical-report-content');
-        const processingState = this.element.querySelector('#processing-state');
-        const completedReport = this.element.querySelector('#completed-report');
-
-        if (this.currentRequest.status === 'completed' && this.currentRequest.report) {
-            processingState.style.display = 'none';
-            completedReport.style.display = 'block';
-
-            // Render markdown report with status indicator
-            const statusBanner = this.currentRequest.hasRealPDF ?
-                '' :
-                `<div class="demo-banner">
-                    <div class="demo-icon">🎭</div>
-                    <div class="demo-text">
-                        <strong>Demo Mode:</strong> ${this.currentRequest.mockReason || 'Using simulated analysis data'}
-                    </div>
-                </div>`;
-
-            const renderedMarkdown = this.renderMarkdown(this.currentRequest.report);
-            completedReport.innerHTML = statusBanner + renderedMarkdown;
-
-            // Add download button for real PDFs
-            if (this.currentRequest.hasRealPDF) {
-                this.addPDFDownloadButton();
-            }
-
-        } else {
-            processingState.style.display = 'block';
-            completedReport.style.display = 'none';
-            this.updateProcessingState();
+        if (pdfSection && summarySection) {
+            pdfSection.style.display = 'block';
+            summarySection.style.display = 'none';
         }
     }
 
     /**
-     * Add PDF download button to markdown report
+     * Show summary view
      */
-    addPDFDownloadButton() {
-        const reportContent = this.element.querySelector('#completed-report');
-        if (reportContent && !reportContent.querySelector('.pdf-download-section')) {
-            const downloadSection = document.createElement('div');
-            downloadSection.className = 'pdf-download-section';
-            downloadSection.style.cssText = `
-                background: #e3f2fd;
-                border: 1px solid #2196f3;
-                border-radius: 8px;
-                padding: 1rem;
-                margin: 1rem 0;
-                text-align: center;
-            `;
+    showSummaryView() {
+        const pdfSection = this.element.querySelector('#pdf-viewer-section');
+        const summarySection = this.element.querySelector('#summary-viewer-section');
 
-            downloadSection.innerHTML = `
-                <div style="margin-bottom: 0.5rem;">
-                    <strong>📄 Real AI Analysis Report Available</strong>
-                </div>
-                <div style="margin-bottom: 1rem; font-size: 0.875rem; color: #666;">
-                    A detailed PDF report was generated by our AI analysis system
-                </div>
-                <button class="btn btn-primary" onclick="window.app.downloadPDFReport('${this.currentRequest.id}')">
-                    📄 Download Complete PDF Report
-                </button>
-            `;
-
-            reportContent.insertBefore(downloadSection, reportContent.firstChild);
+        if (pdfSection && summarySection) {
+            pdfSection.style.display = 'none';
+            summarySection.style.display = 'flex';
         }
+    }
+
+    /**
+     * Switch to PDF view (button handler)
+     */
+    switchToPDFView() {
+        if (this.currentRequest.hasRealPDF) {
+            this.showPDFView();
+        }
+    }
+
+    /**
+     * Switch to summary view (button handler)
+     */
+    switchToSummaryView() {
+        this.showSummaryView();
     }
 
     /**
      * Open PDF in new window
      */
-    openPDFInNewWindow(pdfUrl) {
-        window.open(pdfUrl, '_blank', 'width=1024,height=768,scrollbars=yes,resizable=yes');
+    openPDFInNewWindow() {
+        if (this.currentPDFUrl) {
+            window.open(this.currentPDFUrl, '_blank', 'width=1024,height=768,scrollbars=yes,resizable=yes');
+        }
     }
 
     /**
-     * Format file size
+     * Setup event listeners
      */
-    formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    setupEventListeners() {
+        const modal = this.element;
+
+        // Print button
+        const printBtn = modal.querySelector('#print-report');
+        if (printBtn) {
+            printBtn.onclick = () => this.printReport();
+        }
+
+        // Export button
+        const exportBtn = modal.querySelector('#export-report');
+        if (exportBtn) {
+            exportBtn.onclick = () => this.exportReport();
+        }
+
+        // Image zoom controls
+        const zoomInBtn = modal.querySelector('#zoom-in');
+        const zoomOutBtn = modal.querySelector('#zoom-out');
+        const resetZoomBtn = modal.querySelector('#reset-zoom');
+
+        if (zoomInBtn) zoomInBtn.onclick = () => this.zoomImage(1.2);
+        if (zoomOutBtn) zoomOutBtn.onclick = () => this.zoomImage(0.8);
+        if (resetZoomBtn) resetZoomBtn.onclick = () => this.resetImageZoom();
     }
 
     /**
-     * Updated close method to cleanup PDF URLs
+     * Update modal content
+     */
+    updateContent() {
+        if (!this.currentRequest) return;
+
+        const modal = this.element;
+
+        // Update header info
+        const reportId = modal.querySelector('#report-id');
+        const reportDate = modal.querySelector('#report-date');
+
+        if (reportId) reportId.textContent = this.currentRequest.id;
+        if (reportDate) reportDate.textContent = new Date(this.currentRequest.timestamp).toLocaleDateString();
+
+        // Update image
+        const medicalImage = modal.querySelector('#medical-image');
+        const imageTitle = modal.querySelector('#image-title');
+
+        if (this.currentRequest.imageData && medicalImage && imageTitle) {
+            medicalImage.src = this.currentRequest.imageData;
+            medicalImage.alt = this.currentRequest.filename;
+            imageTitle.textContent = this.currentRequest.filename;
+        }
+
+        // Display report content
+        this.displayReportContent();
+    }
+
+    /**
+     * Display appropriate report content
+     */
+    displayReportContent() {
+        const processingState = this.element.querySelector('#processing-state');
+        const completedReport = this.element.querySelector('#completed-report');
+        const reportContent = this.element.querySelector('#medical-report-content');
+
+        if (this.currentRequest.status === 'completed' && this.currentRequest.report) {
+            // Show completed report
+            if (processingState) processingState.style.display = 'none';
+            if (completedReport) completedReport.style.display = 'block';
+
+            // Add status indicator for real vs demo
+            const statusBanner = this.currentRequest.hasRealPDF ?
+                `<div class="status-banner real-analysis" style="background: #e8f5e8; border: 1px solid #4caf50; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.5rem;">✅</span>
+                        <div>
+                            <strong style="color: #2e7d32;">Real AI Analysis Complete</strong>
+                            <div style="font-size: 0.875rem; color: #666; margin-top: 0.25rem;">
+                                Analysis performed by our AI system • PDF report available for download
+                            </div>
+                        </div>
+                    </div>
+                </div>` :
+                `<div class="status-banner demo-analysis" style="background: #fff3e0; border: 1px solid #ff9800; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.5rem;">🎭</span>
+                        <div>
+                            <strong style="color: #f57c00;">Demo Mode Analysis</strong>
+                            <div style="font-size: 0.875rem; color: #666; margin-top: 0.25rem;">
+                                ${this.currentRequest.mockReason || 'Using simulated analysis data for demonstration'}
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+            const renderedMarkdown = this.renderMarkdown(this.currentRequest.report);
+
+            if (reportContent) {
+                reportContent.innerHTML = statusBanner + renderedMarkdown;
+            }
+
+        } else {
+            // Show processing state
+            if (processingState) processingState.style.display = 'block';
+            if (completedReport) completedReport.style.display = 'none';
+            this.updateProcessingState();
+        }
+    }
+
+    /**
+     * Clean up when closing modal
      */
     close() {
         // Cleanup PDF URL to prevent memory leaks
@@ -1071,173 +1136,6 @@ class ReportModal extends BaseModal {
         }
 
         super.close();
-    }
-
-    /**
-     * Updated updateContent method
-     */
-    updateContent() {
-        if (!this.currentRequest) return;
-
-        const modal = this.element;
-
-        // Update header info
-        modal.querySelector('#report-id').textContent = this.currentRequest.id;
-        modal.querySelector('#report-date').textContent = new Date(this.currentRequest.timestamp).toLocaleDateString();
-        modal.querySelector('#report-status').textContent = this.currentRequest.status;
-
-        // Update image
-        const medicalImage = modal.querySelector('.medical-image');
-        const imageTitle = modal.querySelector('.image-title');
-
-        if (this.currentRequest.imageData) {
-            medicalImage.src = this.currentRequest.imageData;
-            medicalImage.alt = this.currentRequest.filename;
-            imageTitle.textContent = this.currentRequest.filename;
-        }
-
-        // Display appropriate report content
-        if (this.currentRequest.hasRealPDF) {
-            // Real PDF available - display it
-            this.displayPDFInModal = this.displayPDFInModal || (async () => {
-                const pdfBlob = await window.hybridAPI.getPDFBlob(this.currentRequest.id);
-                if (pdfBlob) {
-                    this.displayPDFInModal(pdfBlob);
-                } else {
-                    this.displayMarkdownReport();
-                }
-            });
-        } else {
-            // Show markdown report
-            this.displayMarkdownReport();
-        }
-    }
-
-    /**
-     * Enhanced export functions for real PDFs
-     */
-    async exportReport() {
-        if (this.currentRequest.hasRealPDF) {
-            // Download the real PDF
-            try {
-                await window.app.downloadPDFReport(this.currentRequest.id);
-            } catch (error) {
-                console.error('Failed to download real PDF:', error);
-                // Fall back to markdown export
-                this.exportMarkdownReport();
-            }
-        } else {
-            // Export markdown report
-            this.exportMarkdownReport();
-        }
-    }
-
-    /**
-     * Export markdown report as fallback
-     */
-    exportMarkdownReport() {
-        if (this.currentRequest && this.currentRequest.report) {
-            const blob = new Blob([this.currentRequest.report], { type: 'text/markdown' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `medical_report_${this.currentRequest.id}.md`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-    }
-
-    /**
-     * Enhanced print function
-     */
-    async printReport() {
-        if (this.currentRequest.hasRealPDF) {
-            // Print the PDF
-            const pdfBlob = await window.hybridAPI.getPDFBlob(this.currentRequest.id);
-            if (pdfBlob) {
-                const pdfUrl = URL.createObjectURL(pdfBlob);
-                const printWindow = window.open(pdfUrl, '_blank');
-                printWindow.addEventListener('load', () => {
-                    printWindow.print();
-                    URL.revokeObjectURL(pdfUrl);
-                });
-                return;
-            }
-        }
-
-        // Fall back to markdown printing
-        if (this.currentRequest && this.currentRequest.report) {
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Medical Report - ${this.currentRequest.id}</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
-                        h1, h2, h3 { color: #0066cc; border-bottom: 1px solid #ccc; padding-bottom: 8px; }
-                        .header { text-align: center; margin-bottom: 30px; }
-                        .meta { background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-                        .demo-banner { background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin-bottom: 20px; border-radius: 5px; }
-                        @media print { body { margin: 20px; } }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <h1>Medical Diagnostic Report</h1>
-                        <p>Report ID: ${this.currentRequest.id}</p>
-                        <p>Generated: ${new Date().toLocaleDateString()}</p>
-                    </div>
-                    <div class="meta">
-                        <p><strong>File:</strong> ${this.currentRequest.filename}</p>
-                        <p><strong>Date:</strong> ${new Date(this.currentRequest.timestamp).toLocaleDateString()}</p>
-                        <p><strong>Status:</strong> ${this.currentRequest.status}</p>
-                        ${!this.currentRequest.hasRealPDF ? `
-                            <div class="demo-banner">
-                                <strong>Note:</strong> This is demonstration data. ${this.currentRequest.mockReason || 'Real analysis service was unavailable.'}
-                            </div>
-                        ` : ''}
-                    </div>
-                    <div class="report-content">
-                        ${this.renderMarkdown(this.currentRequest.report)}
-                    </div>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
-            printWindow.print();
-        }
-    }
-
-    updateContent() {
-        if (!this.currentRequest) return;
-
-        const modal = this.element;
-
-        // Update header info
-        modal.querySelector('#report-id').textContent = this.currentRequest.id;
-        modal.querySelector('#report-date').textContent = new Date(this.currentRequest.timestamp).toLocaleDateString();
-        modal.querySelector('#report-status').textContent = this.currentRequest.status;
-
-        // Update image
-        const medicalImage = modal.querySelector('.medical-image');
-        const imageTitle = modal.querySelector('.image-title');
-
-        if (this.currentRequest.imageData) {
-            medicalImage.src = this.currentRequest.imageData;
-            medicalImage.alt = this.currentRequest.filename;
-            imageTitle.textContent = this.currentRequest.filename;
-        }
-
-        // Update report content
-        const reportContent = modal.querySelector('#report-markdown');
-        if (this.currentRequest.report) {
-            reportContent.innerHTML = this.renderMarkdown(this.currentRequest.report);
-        } else {
-            reportContent.innerHTML = this.getReportPlaceholder();
-        }
     }
 
     renderMarkdown(markdown) {

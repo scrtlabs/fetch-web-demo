@@ -12,7 +12,8 @@ class MedicalApp {
             search: ''
         };
         this.modals = new Map();
-
+        this.pdfCache = new Map(); // Cache for PDF blobs
+        
         // Initialize app when DOM is ready
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.init());
@@ -26,6 +27,9 @@ class MedicalApp {
      */
     init() {
         console.log('🚀 Initializing Medical Diagnostics Platform...');
+        
+        // Validate dependencies first
+        this.validateDependencies();
 
         // Load data and setup
         this.loadRequestsFromStorage();
@@ -37,6 +41,20 @@ class MedicalApp {
         this.render();
 
         console.log('✅ Application initialized successfully');
+    }
+
+    validateDependencies() {
+        const warnings = [];
+
+        if (!window.UploadModal) warnings.push('UploadModal class not found');
+        if (!window.ReportModal) warnings.push('ReportModal class not found');
+        if (!window.MockAPI) warnings.push('MockAPI class not found');
+        if (!window.hybridAPI) warnings.push('hybridAPI not available');
+
+        if (warnings.length > 0) {
+            console.warn('⚠️ Missing dependencies:', warnings);
+            // Continue with degraded functionality
+        }
     }
 
     /**
@@ -296,14 +314,10 @@ class MedicalApp {
         this.modals.forEach(modal => modal.close());
     }
 
-
     /**
      * Create new diagnostic request
      */
-    /**
-     * Create new diagnostic request
-     */
-    createRequest(formData) {
+    async createRequest(formData) {
         console.log('🏗️ MedicalApp.createRequest called with:', {
             hasFile: !!formData.file,
             fileName: formData.file?.name,
@@ -334,18 +348,23 @@ class MedicalApp {
                 filename: formData.file.name,
                 fileSize: formData.file.size,
                 fileType: formData.file.type,
-                imageData: null, // Will be set after file processing
+                // file: formData.file,  // Remove this line
+                imageData: null,
                 apiKey: formData.apiKey,
                 note: formData.note || '',
                 progress: 0,
                 report: null,
                 error: null
             };
-
+            
+            // Store file in memory cache instead
+            this.fileCache = this.fileCache || new Map();
+            this.fileCache.set(request.id, formData.file);
+            console.log('File stored in cache')
             console.log('📋 Request object created:', request);
 
             // Process the file for preview
-            this.processFile(request, formData.file);
+            await this.processFile(request, formData.file);
 
             // Add to requests array
             if (!this.requests) {
@@ -364,7 +383,7 @@ class MedicalApp {
 
             // Start analysis with the actual file object
             console.log('🚀 Starting analysis...');
-            this.startAnalysis(request, formData.file);
+            this.startAnalysis(request.id, formData.file);
 
             return request;
 
@@ -377,103 +396,257 @@ class MedicalApp {
     /**
      * Start analysis for a request
      */
-    async startAnalysis(request, file) {
+    async startAnalysis(requestId, file) {
+        console.log('🔬 MedicalApp.startAnalysis called for request:', requestId);
+
+        const request = this.requests.find(req => req.id === requestId);  // Fix getRequest call
+        if (!request) {
+            console.error('❌ Request not found:', requestId);
+            return;
+        }
+
+        // Use the passed file parameter
+        const fileToAnalyze = file || request.file;
+        if (!fileToAnalyze) {
+            console.error('❌ No file available for analysis');
+            return;
+        }
+
+        console.log('📁 File for analysis:', {
+            name: fileToAnalyze.name,
+            size: fileToAnalyze.size,
+            type: fileToAnalyze.type,
+            instanceof: fileToAnalyze instanceof File
+        });
+
         try {
-            console.log('🔬 MedicalApp.startAnalysis called for request:', request.id);
-            console.log('📁 File for analysis:', {
-                name: file?.name,
-                size: file?.size,
-                type: file?.type,
-                instanceof: file instanceof File
-            });
-
-            // Validate inputs
-            if (!file || !(file instanceof File)) {
-                throw new Error('Invalid file object for analysis');
-            }
-
-            if (!window.hybridAPI) {
-                throw new Error('Hybrid API not available');
-            }
-
-            request.status = 'processing';
-            request.progress = 10;
-            this.updateRequestCard(request);
-            this.saveRequestsToStorage();
+            // Update progress using correct method
+            this.updateRequestProgress(requestId, 25, 'Initializing analysis...');
 
             console.log('📤 Calling hybridAPI.analyzeBreastDensity...');
+            const result = await window.hybridAPI.analyzeBreastDensity(
+                fileToAnalyze,  // Use the correct file
+                requestId,
+                request.note
+            );
 
-            // Use hybrid API for analysis
-            const result = await window.hybridAPI.analyzeBreastDensity(file, request.id, request.note);
-
-            console.log('📥 Analysis result received:', result);
-
-            if (result && result.success) {
-                request.status = 'completed';
-                request.progress = 100;
-
-                if (result.type === 'pdf') {
-                    request.pdfAvailable = true;
-                    request.report = 'PDF report generated successfully';
-                    request.metadata = result.metadata;
-                } else if (result.type === 'mock') {
-                    request.report = result.report;
-                    request.metadata = result.metadata;
-                } else {
-                    request.report = result.report || 'Analysis completed';
-                }
-
-                this.showToast('success', 'Analysis Complete',
-                    `Analysis for ${request.filename} completed successfully.`);
-
+            if (result.type === 'pdf') {
+                await this.handlePDFResult(request, result);
             } else {
-                request.status = 'failed';
-                request.error = result?.error || 'Analysis failed for unknown reason';
-                this.showToast('error', 'Analysis Failed',
-                    `Analysis for ${request.filename} failed: ${request.error}`);
+                await this.handleMockResult(request, result);
             }
-
         } catch (error) {
-            console.error('❌ Analysis error in startAnalysis:', error);
-            request.status = 'failed';
-            request.error = error.message;
-            this.showToast('error', 'Analysis Error',
-                `Analysis failed: ${error.message}`);
-        } finally {
-            // Always update UI and save state
+            console.error('❌ Analysis failed:', error);
+            this.handleAnalysisError(requestId, error);
+        }
+    }
+
+    /**
+     * Generate mock report for demonstration
+     */
+    generateMockReport(request) {
+        // Check if MockAPI is available
+        if (window.MockAPI && window.MockAPI.generateMedicalReport) {
+            return window.MockAPI.generateMedicalReport(request);
+        }
+
+        // Fallback implementation
+        const timestamp = new Date().toLocaleDateString();
+        return `# Demo Analysis Report
+
+## Analysis Complete ✅
+
+**Report ID:** ${request.id}
+**Filename:** ${request.filename}
+**Analysis Date:** ${timestamp}
+
+This is a demonstration report generated for testing purposes.
+
+### Findings
+- Demo analysis completed successfully
+- Using sample data for demonstration
+- Real analysis would provide detailed medical insights
+
+**Note:** This is demonstration data only.
+
+*Generated by Medical Diagnostics Platform Demo*`;
+    }
+
+    getRequest(requestId) {
+        return this.requests.find(req => req.id === requestId);
+    }
+
+    updateRequest(requestId, updates) {
+        const request = this.getRequest(requestId);
+        if (request) {
+            Object.assign(request, updates);
             this.saveRequestsToStorage();
             this.renderRequests();
             this.updateFilterTabs();
         }
     }
 
-    /**
-     * Process uploaded file for preview
-     */
-    async processFile(request, file) {
-        try {
-            console.log('🖼️ Processing file for preview:', file.name);
-
-            // Create file preview for images
-            if (file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    request.imageData = e.target.result;
-                    this.saveRequestsToStorage();
-                    this.renderRequests();
-                    console.log('✅ File preview generated');
-                };
-                reader.onerror = (error) => {
-                    console.error('❌ Error reading file for preview:', error);
-                };
-                reader.readAsDataURL(file);
-            } else {
-                console.log('ℹ️ Non-image file, no preview generated');
-            }
-        } catch (error) {
-            console.error('❌ Error processing file:', error);
-            request.error = 'Failed to process uploaded file: ' + error.message;
+    updateRequestProgress(requestId, progress, message) {
+        const request = this.getRequest(requestId);
+        if (request) {
+            request.progress = progress;
+            request.progressMessage = message;
+            this.updateRequestCard(request);
+            this.saveRequestsToStorage();
         }
+    }
+
+    /**
+         * Handle analysis errors
+         */
+    handleAnalysisError(requestId, error) {
+        console.error('❌ Analysis error for request:', requestId, error);
+
+        this.updateRequest(requestId, {
+            status: 'failed',
+            error: error.message,
+            progress: 0,
+            progressMessage: 'Analysis failed'
+        });
+
+        if (this.showToast) {
+            this.showToast('error', 'Analysis Failed', error.message);
+        }
+    }
+    
+    /**
+    * Handle PDF result from real API
+    */
+    async handlePDFResult(request, result) {
+        const requestId = request.id;
+
+        try {
+            console.log('📄 Handling PDF result for request:', requestId);
+
+            // Store PDF blob in cache
+            this.pdfCache.set(requestId, result.data);
+
+            // Update progress
+            this.updateRequestProgress(requestId, 75, 'Processing results...');
+
+            // Generate markdown summary for display
+            const markdownReport = this.generatePDFSummaryMarkdown(result);
+
+            // Update request with results
+            const updates = {
+                status: 'completed',
+                report: markdownReport,
+                hasRealPDF: true,
+                pdfBlob: result.data,
+                pdfSize: result.data.size,
+                apiMetadata: result.metadata || {},
+                completedAt: new Date().toISOString(),
+                progress: 100,
+                progressMessage: 'Analysis completed successfully'
+            };
+
+            this.updateRequest(requestId, updates);
+
+            console.log('✅ PDF result processed successfully');
+
+            // Show success toast
+            if (this.showToast) {
+                this.showToast('success', 'Analysis Complete',
+                    `Real AI analysis completed. PDF report (${this.formatBytes(result.data.size)}) is ready for viewing.`);
+            }
+
+        } catch (error) {
+            console.error('❌ Error handling PDF result:', error);
+            throw error;
+        }
+    }
+
+    /**
+         * Generate markdown summary for PDF results
+         */
+    generatePDFSummaryMarkdown(result) {
+        const metadata = result.metadata || {};
+        const timestamp = new Date().toLocaleDateString();
+
+        return `# AI Medical Imaging Analysis Report
+
+## Real AI Analysis Completed ✅
+
+Your medical image has been successfully analyzed using our advanced AI system. A comprehensive PDF report has been generated with detailed findings and recommendations.
+
+## Report Summary
+- **Report ID:** ${result.requestId}
+- **Analysis Date:** ${timestamp}
+- **Original Filename:** ${metadata.originalFilename || 'Unknown'}
+- **Model Used:** ${metadata.modelName || 'Breast Density Classification'}
+- **Report Size:** ${this.formatBytes(result.data?.size || 0)}
+- **Processing Time:** ${metadata.processingTime || 'Unknown'}
+
+## AI Analysis Features
+✅ **Advanced Deep Learning Model** - Trained on extensive medical imaging datasets
+✅ **BI-RADS Classification** - Industry-standard breast density assessment  
+✅ **Quantitative Analysis** - Precise measurements and statistical analysis
+✅ **Clinical Recommendations** - Evidence-based guidance for next steps
+✅ **Quality Metrics** - Confidence scores and validation results
+
+## Accessing Your Complete Report
+The full diagnostic analysis is available in the PDF report. Click the **"View PDF Report"** button below to access:
+
+- Detailed imaging analysis
+- Density classification results  
+- Quantitative measurements
+- Clinical findings and recommendations
+- Quality assessment metrics
+
+---
+
+**Important:** This AI analysis should be reviewed by a qualified medical professional. The PDF contains the complete technical analysis and clinical details.
+
+*Generated by AI Medical Imaging System on ${timestamp}*`;
+    }
+
+    /**
+         * Handle mock result
+         */
+    async handleMockResult(request, result) {
+        const requestId = request.id;
+
+        console.log('🎭 Handling mock result for request:', requestId);
+
+        // Update progress
+        this.updateRequestProgress(requestId, 75, 'Generating demo report...');
+
+        // Update request with mock results
+        const updates = {
+            status: 'completed',
+            report: result.report || this.generateMockReport(request),
+            hasRealPDF: false,
+            mockReason: result.mockReason || 'Using demonstration data',
+            completedAt: new Date().toISOString(),
+            progress: 100,
+            progressMessage: 'Demo analysis completed'
+        };
+
+        this.updateRequest(requestId, updates);
+
+        console.log('✅ Mock result processed successfully');
+
+        // Show info toast
+        if (this.showToast) {
+            this.showToast('info', 'Demo Analysis Complete',
+                result.mockReason || 'Analysis completed using demonstration data.');
+        }
+    }
+
+    /**
+     * Format bytes for display
+     */
+    formatBytes(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
     /**
@@ -510,50 +683,78 @@ class MedicalApp {
     }
 
     /**
-     * Add method to download PDF for real API results
+     * Download PDF report
      */
-    // Add this to MedicalApp class in js/app.js
+    downloadPDFReport(requestId) {
+        console.log('📥 Downloading PDF for request:', requestId);
 
-    async downloadPDFReport(requestId) {
+        const pdfBlob = this.getPDFBlob(requestId);
+        if (!pdfBlob) {
+            console.error('❌ PDF blob not found for request:', requestId);
+            if (this.showToast) {
+                this.showToast('error', 'Download Failed', 'PDF report not available for download.');
+            }
+            return;
+        }
+
         try {
-            const request = this.requests.find(r => r.id === requestId);
-            if (!request) {
-                throw new Error('Request not found');
-            }
-
-            if (!request.hasRealPDF) {
-                this.showToast('warning', 'No PDF Available',
-                    'This request does not have a real PDF report available.');
-                return;
-            }
-
-            // Get PDF blob from storage
-            const pdfBlob = await window.hybridAPI.getPDFBlob(requestId);
-
-            if (!pdfBlob) {
-                throw new Error('PDF file not found in storage');
-            }
-
             // Create download link
             const url = URL.createObjectURL(pdfBlob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `breast_density_report_${requestId}.pdf`;
+            link.download = `medical_report_${requestId}.pdf`;
+            link.style.display = 'none';
+
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            URL.revokeObjectURL(url);
 
-            this.showToast('success', 'Download Started',
-                'PDF report download has started.');
+            // Cleanup URL after a delay
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+            console.log('✅ PDF download initiated');
+
+            if (this.showToast) {
+                this.showToast('success', 'Download Started', 'PDF report download has been initiated.');
+            }
 
         } catch (error) {
-            console.error('❌ PDF download failed:', error);
-            this.showToast('error', 'Download Failed',
-                `Failed to download PDF: ${error.message}`);
+            console.error('❌ Error downloading PDF:', error);
+            if (this.showToast) {
+                this.showToast('error', 'Download Failed', 'Failed to download PDF report.');
+            }
         }
     }
 
+
+    /**
+     * Get PDF blob for a request
+     */
+    getPDFBlob(requestId) {
+        console.log('📄 Getting PDF blob for request:', requestId);
+
+        // First check local cache
+        let blob = this.pdfCache.get(requestId);
+
+        // If not found, check hybridAPI cache
+        if (!blob && window.hybridAPI && window.hybridAPI.realAPI) {
+            blob = window.hybridAPI.realAPI.getPDFBlob(requestId);
+
+            // Cache it locally if found
+            if (blob) {
+                this.pdfCache.set(requestId, blob);
+            }
+        }
+
+        if (blob) {
+            console.log('✅ PDF blob found:', blob.size, 'bytes');
+        } else {
+            console.log('❌ PDF blob not found');
+        }
+
+        return blob;
+    }
+    
     /**
      * Process uploaded file
      */
@@ -622,31 +823,6 @@ class MedicalApp {
 
         // Show completion toast
         this.showToast('success', 'Analysis Complete', `Diagnostic report for ${request.filename} is ready.`);
-    }
-
-    /**
-     * Update specific request card
-     */
-    updateRequestCard(request) {
-        const card = document.querySelector(`[data-request-id="${request.id}"]`);
-        if (card) {
-            const progressBar = card.querySelector('.progress-fill');
-            const statusBadge = card.querySelector('.status-badge');
-
-            if (progressBar) {
-                progressBar.style.width = `${request.progress}%`;
-            }
-
-            if (statusBadge) {
-                statusBadge.className = `status-badge ${request.status}`;
-                statusBadge.innerHTML = `
-                    <span class="status-icon ${request.status}"></span>
-                    ${request.status}
-                `;
-            }
-        }
-
-        this.saveRequestsToStorage();
     }
 
     /**
